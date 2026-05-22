@@ -1198,5 +1198,26 @@ See https://github.com/adobe-type-tools/cmap-resources
     </div>
     <!-- outerContainer -->
     <div id="printContainer"></div>
+    <script>
+
+document.addEventListener('keydown', function(e) {
+
+if (
+(e.ctrlKey || e.metaKey) &&
+(
+e.key === 'p' ||
+e.key === 'P' ||
+e.key === 's' ||
+e.key === 'S'
+)
+) {
+
+e.preventDefault();
+
+}
+
+});
+
+</script>
   </body>
 </html>
