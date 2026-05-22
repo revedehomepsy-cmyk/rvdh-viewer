@@ -50,11 +50,7 @@ RVDH INTERNAL<br>
 
 const params = new URLSearchParams(window.location.search);
 
-let imageUrl = params.get('img');
-
-if(imageUrl){
-imageUrl += "&download=1";
-}
+const imageUrl = decodeURIComponent(params.get('img'));
 
 document.getElementById('mainImage').src = imageUrl;
 
