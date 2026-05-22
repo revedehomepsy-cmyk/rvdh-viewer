@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>RVDH PDF VIEWER</title>
+
+<style>
+
+body{
+margin:0;
+background:#111;
+overflow:hidden;
+font-family:sans-serif;
+}
+
+.watermark{
+position:fixed;
+top:20px;
+left:20px;
+color:rgba(255,255,255,0.2);
+font-size:24px;
+font-weight:bold;
+z-index:9999;
+pointer-events:none;
+}
+
+iframe{
+width:100vw;
+height:100vh;
+border:none;
+}
+
+</style>
+
+</head>
+
+<body oncontextmenu="return false">
+
+<div class="watermark">
+RVDH INTERNAL<br>
+외부 공유 금지
+</div>
+
+<iframe id="pdfFrame"></iframe>
+
+<script>
+
+const params = new URLSearchParams(window.location.search);
+
+const fileUrl = params.get('file');
+
+document.getElementById('pdfFrame').src =
+"https://mozilla.github.io/pdf.js/web/viewer.html?file=" + encodeURIComponent(fileUrl);
+
+</script>
+
+</body>
+</html>
