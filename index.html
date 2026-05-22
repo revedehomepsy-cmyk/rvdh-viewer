@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
 
 <style>
 
@@ -35,6 +38,7 @@ z-index:9999;
 }
 
 </style>
+
 </head>
 
 <body oncontextmenu="return false">
@@ -48,11 +52,16 @@ RVDH INTERNAL<br>
 
 <script>
 
-const params = new URLSearchParams(window.location.search);
+const params =
+new URLSearchParams(window.location.search);
 
-const imageUrl = decodeURIComponent(params.get('img'));
+const imageUrl =
+decodeURIComponent(params.get('img'));
 
-document.getElementById('mainImage').src = imageUrl;
+console.log(imageUrl);
+
+document.getElementById('mainImage').src =
+imageUrl;
 
 </script>
 
