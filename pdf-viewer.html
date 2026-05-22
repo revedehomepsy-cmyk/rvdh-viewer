@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,11 +20,12 @@ font-family:sans-serif;
 position:fixed;
 top:20px;
 left:20px;
-color:rgba(255,255,255,0.2);
+color:rgba(255,255,255,0.18);
 font-size:24px;
 font-weight:bold;
 z-index:9999;
 pointer-events:none;
+line-height:1.4;
 }
 
 iframe{
@@ -32,11 +34,26 @@ height:100vh;
 border:none;
 }
 
+/* 모바일 대응 */
+
+@media (max-width:768px){
+
+.watermark{
+font-size:16px;
+top:12px;
+left:12px;
+}
+
+}
+
 </style>
 
 </head>
 
-<body oncontextmenu="return false">
+<body
+oncontextmenu="return false"
+onkeydown="return false"
+>
 
 <div class="watermark">
 RVDH INTERNAL<br>
@@ -51,8 +68,12 @@ const params = new URLSearchParams(window.location.search);
 
 const fileUrl = params.get('file');
 
-document.getElementById('pdfFrame').src =
-"https://mozilla.github.io/pdf.js/web/viewer.html?file=" + encodeURIComponent(fileUrl);
+const viewerUrl =
+"https://mozilla.github.io/pdf.js/web/viewer.html?file="
++ encodeURIComponent(fileUrl)
++ "#toolbar=0&navpanes=0&scrollbar=0";
+
+document.getElementById("pdfFrame").src = viewerUrl;
 
 </script>
 
