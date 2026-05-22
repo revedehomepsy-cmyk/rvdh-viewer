@@ -8817,3 +8817,19 @@ dialog :link{
     display:none;
   }
 }
+#downloadButton,
+#printButton,
+#secondaryDownload,
+#secondaryPrint,
+#secondaryOpenFile,
+#openFileButton {
+display:none !important;
+}
+
+#toolbarViewer {
+display:none !important;
+}
+
+#viewerContainer {
+top:0 !important;
+}
