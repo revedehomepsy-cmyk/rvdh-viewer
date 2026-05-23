@@ -5,18 +5,23 @@
 
 <meta charset="UTF-8">
 
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+>
 
 <title>RVDH Approval</title>
+
+<link rel="icon" type="image/png" href="./favicon.png">
+<link rel="apple-touch-icon" href="./favicon.png">
 
 <style>
 
 body{
 margin:0;
-background:#111;
+background:#3B2A1D;
 color:white;
-font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
 padding:24px;
 }
 
@@ -25,17 +30,31 @@ max-width:760px;
 margin:0 auto;
 }
 
+.logoWrap{
+display:flex;
+justify-content:center;
+align-items:center;
+margin:8px 0 28px;
+}
+
+.logo{
+max-width:190px;
+max-height:72px;
+object-fit:contain;
+}
+
 .card{
-background:#1b1b1b;
-border:1px solid #2a2a2a;
+background:#463426;
+border:1px solid rgba(255,255,255,0.12);
 border-radius:28px;
 padding:28px;
 margin-bottom:24px;
+box-shadow:0 20px 60px rgba(0,0,0,0.18);
 }
 
 .label{
 font-size:13px;
-color:#888;
+color:rgba(255,255,255,0.58);
 margin-bottom:8px;
 }
 
@@ -55,9 +74,10 @@ display:inline-flex;
 align-items:center;
 padding:10px 16px;
 border-radius:999px;
-background:#2b2b2b;
+background:#2F2118;
 font-size:14px;
 margin-top:20px;
+border:1px solid rgba(255,255,255,0.1);
 }
 
 .viewerGrid{
@@ -74,7 +94,7 @@ justify-content:center;
 height:60px;
 border-radius:20px;
 background:white;
-color:black;
+color:#2F2118;
 text-decoration:none;
 font-weight:700;
 font-size:16px;
@@ -83,8 +103,8 @@ font-size:16px;
 textarea{
 width:100%;
 height:140px;
-background:#111;
-border:1px solid #333;
+background:#2F2118;
+border:1px solid rgba(255,255,255,0.16);
 border-radius:20px;
 padding:18px;
 box-sizing:border-box;
@@ -92,6 +112,11 @@ color:white;
 font-size:15px;
 resize:none;
 margin-top:16px;
+outline:none;
+}
+
+textarea::placeholder{
+color:rgba(255,255,255,0.38);
 }
 
 .actionGrid{
@@ -118,11 +143,11 @@ cursor:not-allowed;
 
 .approve{
 background:white;
-color:black;
+color:#2F2118;
 }
 
 .reject{
-background:#ff4d4f;
+background:#9E3E31;
 color:white;
 }
 
@@ -140,10 +165,11 @@ z-index:9999;
 .popupBox{
 width:100%;
 max-width:420px;
-background:#1b1b1b;
-border:1px solid #333;
+background:#463426;
+border:1px solid rgba(255,255,255,0.14);
 border-radius:28px;
 padding:28px;
+box-shadow:0 30px 80px rgba(0,0,0,0.35);
 }
 
 .popupTitle{
@@ -153,7 +179,7 @@ margin-bottom:16px;
 }
 
 .popupDesc{
-color:#aaa;
+color:rgba(255,255,255,0.68);
 line-height:1.7;
 margin-bottom:28px;
 }
@@ -165,19 +191,126 @@ gap:12px;
 }
 
 .cancelBtn{
-background:#2b2b2b;
+background:#2F2118;
 color:white;
 }
 
 .confirmBtn{
 background:white;
-color:black;
+color:#2F2118;
+}
+
+.passwordScreen{
+position:fixed;
+inset:0;
+background:#3B2A1D;
+display:flex;
+align-items:center;
+justify-content:center;
+padding:24px;
+z-index:10000;
+}
+
+.passwordBox{
+width:100%;
+max-width:420px;
+background:#463426;
+border:1px solid rgba(255,255,255,0.12);
+border-radius:28px;
+padding:30px;
+box-shadow:0 30px 80px rgba(0,0,0,0.28);
+text-align:center;
+}
+
+.passwordLogo{
+max-width:170px;
+max-height:64px;
+object-fit:contain;
+margin-bottom:26px;
+}
+
+.passwordTitle{
+font-size:24px;
+font-weight:700;
+margin-bottom:12px;
+}
+
+.passwordDesc{
+color:rgba(255,255,255,0.62);
+line-height:1.6;
+margin-bottom:24px;
+}
+
+.passwordInput{
+width:100%;
+height:58px;
+border-radius:18px;
+border:1px solid rgba(255,255,255,0.18);
+background:#2F2118;
+color:white;
+font-size:22px;
+text-align:center;
+box-sizing:border-box;
+outline:none;
+letter-spacing:6px;
+}
+
+.passwordBtn{
+width:100%;
+height:58px;
+background:white;
+color:#2F2118;
+margin-top:14px;
+}
+
+.errorText{
+color:#ffb3a8;
+font-size:14px;
+margin-top:14px;
+display:none;
+}
+
+.expiredScreen{
+position:fixed;
+inset:0;
+background:#3B2A1D;
+display:none;
+align-items:center;
+justify-content:center;
+padding:24px;
+z-index:10001;
+}
+
+.expiredBox{
+width:100%;
+max-width:440px;
+background:#463426;
+border:1px solid rgba(255,255,255,0.12);
+border-radius:28px;
+padding:32px;
+text-align:center;
+box-shadow:0 30px 80px rgba(0,0,0,0.28);
+}
+
+.expiredTitle{
+font-size:24px;
+font-weight:700;
+margin-bottom:14px;
+}
+
+.expiredDesc{
+color:rgba(255,255,255,0.64);
+line-height:1.7;
 }
 
 @media(max-width:640px){
 
 body{
 padding:16px;
+}
+
+.logo{
+max-width:160px;
 }
 
 .viewerGrid{
@@ -192,6 +325,11 @@ grid-template-columns:1fr;
 font-size:28px;
 }
 
+.card{
+padding:24px;
+border-radius:24px;
+}
+
 }
 
 </style>
@@ -200,7 +338,82 @@ font-size:28px;
 
 <body>
 
-<div class="container">
+<div class="passwordScreen" id="passwordScreen">
+
+<div class="passwordBox">
+
+<img
+src="./logo.svg"
+class="passwordLogo"
+alt="RVDH Logo"
+>
+
+<div class="passwordTitle">
+열람 비밀번호 입력
+</div>
+
+<div class="passwordDesc">
+승인 문서를 확인하기 위해<br>
+열람 비밀번호를 입력해주세요.
+</div>
+
+<input
+id="passwordInput"
+class="passwordInput"
+type="password"
+inputmode="numeric"
+placeholder="••••"
+>
+
+<button
+class="passwordBtn"
+id="passwordBtn"
+>
+확인
+</button>
+
+<div class="errorText" id="passwordError">
+비밀번호가 올바르지 않습니다.
+</div>
+
+</div>
+
+</div>
+
+<div class="expiredScreen" id="expiredScreen">
+
+<div class="expiredBox">
+
+<img
+src="./logo.svg"
+class="passwordLogo"
+alt="RVDH Logo"
+>
+
+<div class="expiredTitle">
+만료된 승인 링크입니다
+</div>
+
+<div class="expiredDesc">
+이 승인 페이지의 열람 가능 기간이 종료되었습니다.<br>
+필요한 경우 담당자에게 새 승인 링크를 요청해주세요.
+</div>
+
+</div>
+
+</div>
+
+<div class="container" id="mainContent">
+
+<div class="logoWrap">
+
+<img
+src="./logo.svg"
+class="logo"
+alt="RVDH Logo"
+>
+
+</div>
 
 <div class="card">
 
@@ -242,6 +455,7 @@ font-size:28px;
 id="orderButton"
 class="viewerButton"
 target="_blank"
+rel="noopener noreferrer"
 >
 발주서 보기
 </a>
@@ -250,6 +464,7 @@ target="_blank"
 id="specButton"
 class="viewerButton"
 target="_blank"
+rel="noopener noreferrer"
 >
 명세서 보기
 </a>
@@ -304,7 +519,7 @@ id="confirmPopup"
 
 <div class="popupDesc">
 승인 완료 후에는 수정이 불가능합니다.<br><br>
-문서 내용을 다시 한번 확인해주세요.
+발주서와 명세서 내용을 다시 한번 확인해주세요.
 </div>
 
 <div class="popupButtons">
@@ -330,6 +545,12 @@ onclick="confirmApproval()"
 </div>
 
 <script>
+
+const ACCESS_PASSWORD =
+'0723';
+
+const MAKE_WEBHOOK_URL =
+'https://hook.us1.make.com/REPLACE_WITH_YOUR_WEBHOOK';
 
 const params =
 new URLSearchParams(window.location.search);
@@ -362,6 +583,9 @@ decodeURIComponent(
 params.get('spec') || '#'
 );
 
+const expires =
+params.get('expires') || '';
+
 document.getElementById('projectName').innerText =
 projectName;
 
@@ -377,25 +601,125 @@ orderViewer;
 document.getElementById('specButton').href =
 specViewer;
 
+function checkExpiration(){
+
+if(!expires){
+return false;
+}
+
+const expireDate =
+new Date(expires);
+
+if(isNaN(expireDate.getTime())){
+return false;
+}
+
+const now =
+new Date();
+
+return now > expireDate;
+
+}
+
+function showExpired(){
+
+document.getElementById('expiredScreen').style.display =
+'flex';
+
+document.getElementById('passwordScreen').style.display =
+'none';
+
+document.getElementById('mainContent').style.display =
+'none';
+
+}
+
+function unlockPage(){
+
+document.getElementById('passwordScreen').style.display =
+'none';
+
+document.getElementById('mainContent').style.display =
+'block';
+
+}
+
+function checkPassword(){
+
+const input =
+document.getElementById('passwordInput').value;
+
+if(input === ACCESS_PASSWORD){
+
+sessionStorage.setItem('rvdh_approval_unlocked','true');
+
+unlockPage();
+
+}else{
+
+document.getElementById('passwordError').style.display =
+'block';
+
+}
+
+}
+
+document.getElementById('passwordBtn')
+.addEventListener('click', checkPassword);
+
+document.getElementById('passwordInput')
+.addEventListener('keydown', function(e){
+
+if(e.key === 'Enter'){
+checkPassword();
+}
+
+});
+
+if(checkExpiration()){
+
+showExpired();
+
+}else{
+
+const unlocked =
+sessionStorage.getItem('rvdh_approval_unlocked');
+
+if(unlocked === 'true'){
+
+unlockPage();
+
+}else{
+
+document.getElementById('mainContent').style.display =
+'none';
+
+}
+
+}
+
 const popup =
 document.getElementById('confirmPopup');
 
 document.getElementById('approveBtn')
 .addEventListener('click', () => {
 
-popup.style.display = 'flex';
+popup.style.display =
+'flex';
 
 });
 
 function closePopup(){
 
-popup.style.display = 'none';
+popup.style.display =
+'none';
 
 }
 
 async function confirmApproval(){
 
-popup.style.display = 'none';
+popup.style.display =
+'none';
 
 await sendWebhook('approved');
 
@@ -415,19 +739,30 @@ await sendWebhook('rejected');
 
 async function sendWebhook(status){
 
+if(checkExpiration()){
+
+showExpired();
+
+return;
+
+}
+
 const approveBtn =
 document.getElementById('approveBtn');
 
 const rejectBtn =
 document.getElementById('rejectBtn');
 
-approveBtn.disabled = true;
-rejectBtn.disabled = true;
+approveBtn.disabled =
+true;
+
+rejectBtn.disabled =
+true;
 
 try{
 
 await fetch(
-'https://hook.us1.make.com/REPLACE_WITH_YOUR_WEBHOOK',
+MAKE_WEBHOOK_URL,
 {
 method:'POST',
 headers:{
@@ -437,8 +772,16 @@ body:JSON.stringify({
 
 id:approvalId,
 status:status,
+project:projectName,
+vendor:vendorName,
+amount:amount,
+order:orderViewer,
+spec:specViewer,
+expires:expires,
 comment:
-document.getElementById('comment').value
+document.getElementById('comment').value,
+submittedAt:
+new Date().toISOString()
 
 })
 }
@@ -457,10 +800,13 @@ status === 'approved'
 
 }catch(error){
 
-alert('오류가 발생했습니다.');
+alert('오류가 발생했습니다. 다시 시도해주세요.');
 
-approveBtn.disabled = false;
-rejectBtn.disabled = false;
+approveBtn.disabled =
+false;
+
+rejectBtn.disabled =
+false;
 
 }
 
