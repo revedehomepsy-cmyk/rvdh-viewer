@@ -21,45 +21,77 @@ padding:24px;
 }
 
 .container{
-max-width:720px;
+max-width:760px;
 margin:0 auto;
 }
 
 .card{
 background:#1b1b1b;
 border:1px solid #2a2a2a;
-border-radius:24px;
-padding:24px;
-margin-bottom:20px;
+border-radius:28px;
+padding:28px;
+margin-bottom:24px;
 }
 
 .label{
 font-size:13px;
 color:#888;
-margin-bottom:6px;
+margin-bottom:8px;
 }
 
 .value{
-font-size:18px;
+font-size:20px;
+font-weight:500;
 }
 
 .amount{
-font-size:28px;
+font-size:34px;
 font-weight:700;
+margin-top:8px;
+}
+
+.status{
+display:inline-flex;
+align-items:center;
+padding:10px 16px;
+border-radius:999px;
+background:#2b2b2b;
+font-size:14px;
+margin-top:20px;
+}
+
+.viewerGrid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:16px;
+margin-top:28px;
 }
 
 .viewerButton{
-display:block;
-width:100%;
+display:flex;
+align-items:center;
+justify-content:center;
+height:60px;
+border-radius:20px;
 background:white;
 color:black;
 text-decoration:none;
+font-weight:700;
+font-size:16px;
+}
+
+textarea{
+width:100%;
+height:140px;
+background:#111;
+border:1px solid #333;
+border-radius:20px;
 padding:18px;
-border-radius:18px;
-text-align:center;
-font-weight:600;
-margin-top:16px;
 box-sizing:border-box;
+color:white;
+font-size:15px;
+resize:none;
+margin-top:16px;
 }
 
 .actionGrid{
@@ -70,12 +102,18 @@ margin-top:24px;
 }
 
 button{
-height:58px;
+height:60px;
 border:none;
-border-radius:18px;
-font-size:16px;
+border-radius:20px;
+font-size:17px;
 font-weight:700;
 cursor:pointer;
+transition:0.2s;
+}
+
+button:disabled{
+opacity:0.4;
+cursor:not-allowed;
 }
 
 .approve{
@@ -88,37 +126,10 @@ background:#ff4d4f;
 color:white;
 }
 
-button:disabled{
-opacity:0.4;
-cursor:not-allowed;
-}
-
-.status{
-display:inline-block;
-padding:8px 14px;
-border-radius:999px;
-background:#2b2b2b;
-font-size:13px;
-margin-top:8px;
-}
-
-textarea{
-width:100%;
-height:120px;
-background:#111;
-border:1px solid #333;
-border-radius:18px;
-padding:16px;
-color:white;
-box-sizing:border-box;
-resize:none;
-margin-top:16px;
-}
-
 .popup{
 position:fixed;
 inset:0;
-background:rgba(0,0,0,0.7);
+background:rgba(0,0,0,0.75);
 display:none;
 align-items:center;
 justify-content:center;
@@ -127,34 +138,30 @@ z-index:9999;
 }
 
 .popupBox{
-background:#1b1b1b;
-border-radius:24px;
-padding:28px;
-max-width:420px;
 width:100%;
+max-width:420px;
+background:#1b1b1b;
 border:1px solid #333;
+border-radius:28px;
+padding:28px;
 }
 
 .popupTitle{
-font-size:22px;
+font-size:24px;
 font-weight:700;
-margin-bottom:12px;
+margin-bottom:16px;
 }
 
 .popupDesc{
 color:#aaa;
-line-height:1.6;
-margin-bottom:24px;
+line-height:1.7;
+margin-bottom:28px;
 }
 
 .popupButtons{
 display:grid;
 grid-template-columns:1fr 1fr;
 gap:12px;
-}
-
-.popupButtons button{
-height:52px;
 }
 
 .cancelBtn{
@@ -167,6 +174,26 @@ background:white;
 color:black;
 }
 
+@media(max-width:640px){
+
+body{
+padding:16px;
+}
+
+.viewerGrid{
+grid-template-columns:1fr;
+}
+
+.actionGrid{
+grid-template-columns:1fr;
+}
+
+.amount{
+font-size:28px;
+}
+
+}
+
 </style>
 
 </head>
@@ -174,7 +201,7 @@ color:black;
 <body>
 
 <div class="container">
-<h1>TEST123</h1>
+
 <div class="card">
 
 <div class="label">
@@ -209,13 +236,25 @@ color:black;
 검토중
 </div>
 
+<div class="viewerGrid">
+
 <a
-id="viewerButton"
+id="orderButton"
 class="viewerButton"
 target="_blank"
 >
-문서 보기
+발주서 보기
 </a>
+
+<a
+id="specButton"
+class="viewerButton"
+target="_blank"
+>
+명세서 보기
+</a>
+
+</div>
 
 </div>
 
@@ -252,7 +291,10 @@ id="rejectBtn"
 
 </div>
 
-<div class="popup" id="confirmPopup">
+<div
+class="popup"
+id="confirmPopup"
+>
 
 <div class="popupBox">
 
@@ -261,8 +303,8 @@ id="rejectBtn"
 </div>
 
 <div class="popupDesc">
-승인 완료 후에는 수정이 불가능합니다.<br>
-내용을 다시 한번 확인해주세요.
+승인 완료 후에는 수정이 불가능합니다.<br><br>
+문서 내용을 다시 한번 확인해주세요.
 </div>
 
 <div class="popupButtons">
@@ -293,22 +335,32 @@ const params =
 new URLSearchParams(window.location.search);
 
 const approvalId =
-params.get('id');
+params.get('id') || '';
 
 const projectName =
-decodeURIComponent(params.get('project') || '-');
+decodeURIComponent(
+params.get('project') || '-'
+);
 
 const vendorName =
-decodeURIComponent(params.get('vendor') || '-');
+decodeURIComponent(
+params.get('vendor') || '-'
+);
 
 const amount =
-decodeURIComponent(params.get('amount') || '-');
+decodeURIComponent(
+params.get('amount') || '-'
+);
 
 const orderViewer =
-decodeURIComponent(params.get('order') || '#');
+decodeURIComponent(
+params.get('order') || '#'
+);
 
 const specViewer =
-decodeURIComponent(params.get('spec') || '#');
+decodeURIComponent(
+params.get('spec') || '#'
+);
 
 document.getElementById('projectName').innerText =
 projectName;
@@ -319,8 +371,11 @@ vendorName;
 document.getElementById('amount').innerText =
 amount;
 
-document.getElementById('viewerButton').href =
-viewer;
+document.getElementById('orderButton').href =
+orderViewer;
+
+document.getElementById('specButton').href =
+specViewer;
 
 const popup =
 document.getElementById('confirmPopup');
