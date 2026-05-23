@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>RVDH Approval</title>
+
+<style>
+
+body{
+margin:0;
+background:#111;
+color:white;
+font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+padding:24px;
+}
+
+.container{
+max-width:720px;
+margin:0 auto;
+}
+
+.card{
+background:#1b1b1b;
+border:1px solid #2a2a2a;
+border-radius:24px;
+padding:24px;
+margin-bottom:20px;
+}
+
+.label{
+font-size:13px;
+color:#888;
+margin-bottom:6px;
+}
+
+.value{
+font-size:18px;
+}
+
+.amount{
+font-size:28px;
+font-weight:700;
+}
+
+.viewerButton{
+display:block;
+width:100%;
+background:white;
+color:black;
+text-decoration:none;
+padding:18px;
+border-radius:18px;
+text-align:center;
+font-weight:600;
+margin-top:16px;
+box-sizing:border-box;
+}
+
+.actionGrid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:16px;
+margin-top:24px;
+}
+
+button{
+height:58px;
+border:none;
+border-radius:18px;
+font-size:16px;
+font-weight:700;
+cursor:pointer;
+}
+
+.approve{
+background:white;
+color:black;
+}
+
+.reject{
+background:#ff4d4f;
+color:white;
+}
+
+button:disabled{
+opacity:0.4;
+cursor:not-allowed;
+}
+
+.status{
+display:inline-block;
+padding:8px 14px;
+border-radius:999px;
+background:#2b2b2b;
+font-size:13px;
+margin-top:8px;
+}
+
+textarea{
+width:100%;
+height:120px;
+background:#111;
+border:1px solid #333;
+border-radius:18px;
+padding:16px;
+color:white;
+box-sizing:border-box;
+resize:none;
+margin-top:16px;
+}
+
+.popup{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,0.7);
+display:none;
+align-items:center;
+justify-content:center;
+padding:20px;
+z-index:9999;
+}
+
+.popupBox{
+background:#1b1b1b;
+border-radius:24px;
+padding:28px;
+max-width:420px;
+width:100%;
+border:1px solid #333;
+}
+
+.popupTitle{
+font-size:22px;
+font-weight:700;
+margin-bottom:12px;
+}
+
+.popupDesc{
+color:#aaa;
+line-height:1.6;
+margin-bottom:24px;
+}
+
+.popupButtons{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+}
+
+.popupButtons button{
+height:52px;
+}
+
+.cancelBtn{
+background:#2b2b2b;
+color:white;
+}
+
+.confirmBtn{
+background:white;
+color:black;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="card">
+
+<div class="label">
+프로젝트명
+</div>
+
+<div class="value" id="projectName">
+-
+</div>
+
+<br>
+
+<div class="label">
+업체명
+</div>
+
+<div class="value" id="vendorName">
+-
+</div>
+
+<br>
+
+<div class="label">
+발주 금액
+</div>
+
+<div class="amount" id="amount">
+-
+</div>
+
+<div class="status" id="status">
+검토중
+</div>
+
+<a
+id="viewerButton"
+class="viewerButton"
+target="_blank"
+>
+문서 보기
+</a>
+
+</div>
+
+<div class="card">
+
+<div class="label">
+메모 / 반려 사유
+</div>
+
+<textarea
+id="comment"
+placeholder="내용을 입력해주세요."
+></textarea>
+
+<div class="actionGrid">
+
+<button
+class="approve"
+id="approveBtn"
+>
+승인하기
+</button>
+
+<button
+class="reject"
+id="rejectBtn"
+>
+반려하기
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="popup" id="confirmPopup">
+
+<div class="popupBox">
+
+<div class="popupTitle">
+승인하시겠습니까?
+</div>
+
+<div class="popupDesc">
+승인 완료 후에는 수정이 불가능합니다.<br>
+내용을 다시 한번 확인해주세요.
+</div>
+
+<div class="popupButtons">
+
+<button
+class="cancelBtn"
+onclick="closePopup()"
+>
+취소
+</button>
+
+<button
+class="confirmBtn"
+onclick="confirmApproval()"
+>
+최종 승인
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const params =
+new URLSearchParams(window.location.search);
+
+const approvalId =
+params.get('id');
+
+const projectName =
+decodeURIComponent(params.get('project') || '-');
+
+const vendorName =
+decodeURIComponent(params.get('vendor') || '-');
+
+const amount =
+decodeURIComponent(params.get('amount') || '-');
+
+const viewer =
+decodeURIComponent(params.get('viewer') || '#');
+
+document.getElementById('projectName').innerText =
+projectName;
+
+document.getElementById('vendorName').innerText =
+vendorName;
+
+document.getElementById('amount').innerText =
+amount;
+
+document.getElementById('viewerButton').href =
+viewer;
+
+const popup =
+document.getElementById('confirmPopup');
+
+document.getElementById('approveBtn')
+.addEventListener('click', () => {
+
+popup.style.display = 'flex';
+
+});
+
+function closePopup(){
+
+popup.style.display = 'none';
+
+}
+
+async function confirmApproval(){
+
+popup.style.display = 'none';
+
+await sendWebhook('approved');
+
+}
+
+document.getElementById('rejectBtn')
+.addEventListener('click', async () => {
+
+const ok =
+confirm('반려 처리하시겠습니까?');
+
+if(!ok) return;
+
+await sendWebhook('rejected');
+
+});
+
+async function sendWebhook(status){
+
+const approveBtn =
+document.getElementById('approveBtn');
+
+const rejectBtn =
+document.getElementById('rejectBtn');
+
+approveBtn.disabled = true;
+rejectBtn.disabled = true;
+
+try{
+
+await fetch(
+'https://hook.us1.make.com/REPLACE_WITH_YOUR_WEBHOOK',
+{
+method:'POST',
+headers:{
+'Content-Type':'application/json'
+},
+body:JSON.stringify({
+
+id:approvalId,
+status:status,
+comment:
+document.getElementById('comment').value
+
+})
+}
+);
+
+document.getElementById('status').innerText =
+status === 'approved'
+? '승인완료'
+: '반려';
+
+alert(
+status === 'approved'
+? '승인이 완료되었습니다.'
+: '반려 처리되었습니다.'
+);
+
+}catch(error){
+
+alert('오류가 발생했습니다.');
+
+approveBtn.disabled = false;
+rejectBtn.disabled = false;
+
+}
+
+}
+
+</script>
+
+</body>
+
+</html>
