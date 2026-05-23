@@ -304,8 +304,11 @@ decodeURIComponent(params.get('vendor') || '-');
 const amount =
 decodeURIComponent(params.get('amount') || '-');
 
-const viewer =
-decodeURIComponent(params.get('viewer') || '#');
+const orderViewer =
+decodeURIComponent(params.get('order') || '#');
+
+const specViewer =
+decodeURIComponent(params.get('spec') || '#');
 
 document.getElementById('projectName').innerText =
 projectName;
