@@ -1,68 +1,193 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-
 <meta charset="UTF-8">
-
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RVDH Viewer</title>
 
 <style>
-
 body{
-margin:0;
-background:#111;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-overflow:hidden;
+  margin:0;
+  background:#2f2118;
+  color:white;
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  padding:24px;
 }
 
-img{
-max-width:95vw;
-max-height:95vh;
-pointer-events:none;
-user-select:none;
--webkit-user-drag:none;
+.viewer{
+  max-width:1100px;
+  margin:0 auto;
 }
 
-.watermark{
-position:fixed;
-top:20px;
-left:20px;
-color:rgba(255,255,255,0.2);
-font-size:24px;
-font-weight:bold;
-z-index:9999;
+.header{
+  text-align:center;
+  margin-bottom:24px;
 }
 
+.title{
+  font-size:18px;
+  font-weight:700;
+  letter-spacing:.08em;
+  opacity:.8;
+}
+
+.debug{
+  background:#463426;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:20px;
+  font-size:13px;
+  line-height:1.6;
+  color:rgba(255,255,255,.75);
+  word-break:break-all;
+}
+
+.imageWrap{
+  margin-bottom:24px;
+  background:#463426;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:18px;
+  padding:12px;
+}
+
+.imageWrap img{
+  display:block;
+  width:100%;
+  height:auto;
+  border-radius:12px;
+  background:white;
+  pointer-events:none;
+  -webkit-user-drag:none;
+  user-select:none;
+}
+
+.pageLabel{
+  font-size:13px;
+  color:rgba(255,255,255,.6);
+  margin:0 0 10px 4px;
+}
+
+.empty{
+  text-align:center;
+  padding:80px 20px;
+  color:rgba(255,255,255,.65);
+}
+
+.error{
+  color:#ffb3a8;
+  font-size:14px;
+  line-height:1.6;
+  word-break:break-all;
+}
 </style>
-
 </head>
 
-<body oncontextmenu="return false">
+<body oncontextmenu="return false;">
 
-<div class="watermark">
-RVDH INTERNAL<br>
-외부 공유 금지
+<div class="viewer">
+  <div class="header">
+    <div class="title">RVDH DOCUMENT VIEWER</div>
+  </div>
+
+  <div id="debug" class="debug"></div>
+  <div id="content"></div>
 </div>
 
-<img id="mainImage">
-
 <script>
+const params = new URLSearchParams(window.location.search);
 
-const params =
-new URLSearchParams(window.location.search);
+const rawSingleImg = params.get('img') || '';
+const rawMultiImgs = params.get('imgs') || '';
 
-const imageUrl =
-decodeURIComponent(params.get('img'));
+const debug = document.getElementById('debug');
+const content = document.getElementById('content');
 
-console.log(imageUrl);
+function safeDecode(value){
+  if(!value) return '';
 
-document.getElementById('mainImage').src =
-imageUrl;
+  let result = value;
 
+  for(let i = 0; i < 3; i++){
+    try{
+      const decoded = decodeURIComponent(result);
+      if(decoded === result) break;
+      result = decoded;
+    }catch(e){
+      break;
+    }
+  }
+
+  return result;
+}
+
+function splitImageUrls(value){
+  const decoded = safeDecode(value);
+
+  return decoded
+    .split('|')
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
+function renderDebug(urls){
+  debug.innerHTML = `
+    <b>viewer loaded</b><br>
+    img: ${rawSingleImg ? '있음' : '없음'}<br>
+    imgs: ${rawMultiImgs ? '있음' : '없음'}<br>
+    image count: ${urls.length}<br>
+    ${urls.map((url, i) => `${i + 1}. ${url}`).join('<br>')}
+  `;
+}
+
+function renderImages(urls){
+  content.innerHTML = '';
+
+  if(!urls.length){
+    content.innerHTML = '<div class="empty">표시할 이미지가 없습니다.</div>';
+    return;
+  }
+
+  urls.forEach((url, index) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'imageWrap';
+
+    const label = document.createElement('div');
+    label.className = 'pageLabel';
+    label.textContent = `${index + 1} 페이지`;
+
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = `${index + 1} 페이지`;
+
+    img.addEventListener('dragstart', e => e.preventDefault());
+
+    img.onerror = function(){
+      wrap.innerHTML = `
+        <div class="pageLabel">${index + 1} 페이지</div>
+        <div class="error">
+          이미지를 불러오지 못했습니다.<br>
+          ${url}
+        </div>
+      `;
+    };
+
+    wrap.appendChild(label);
+    wrap.appendChild(img);
+    content.appendChild(wrap);
+  });
+}
+
+let imageUrls = [];
+
+if(rawMultiImgs){
+  imageUrls = splitImageUrls(rawMultiImgs);
+}else if(rawSingleImg){
+  imageUrls = [safeDecode(rawSingleImg)];
+}
+
+renderDebug(imageUrls);
+renderImages(imageUrls);
 </script>
 
 </body>
