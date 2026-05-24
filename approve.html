@@ -4,71 +4,433 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RVDH Approval</title>
+
 <link rel="icon" type="image/png" href="./favicon.png">
 <link rel="apple-touch-icon" href="./favicon.png">
 
 <style>
-body{margin:0;background:#3B2A1D;color:white;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;padding:24px}
-.container{max-width:760px;margin:0 auto}
-.logoWrap{display:flex;justify-content:center;align-items:center;margin:10px 0 34px;text-align:center}
-.logo{width:270px;height:auto;max-width:90%;object-fit:contain}
-.logoSubText{margin-top:10px;font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.58);font-weight:500}
-.card{background:#463426;border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:28px;margin-bottom:24px;box-shadow:0 20px 60px rgba(0,0,0,.18)}
-.infoGrid{display:grid;grid-template-columns:1fr 1fr;gap:22px 18px}
-.infoFull{grid-column:1/-1}
-.label{font-size:13px;color:rgba(255,255,255,.58);margin-bottom:8px}
-.value{font-size:20px;font-weight:500;line-height:1.45;word-break:keep-all}
-.amount{font-size:34px;font-weight:700;margin-top:8px}
-.status{display:inline-flex;align-items:center;padding:10px 16px;border-radius:999px;background:#2F2118;font-size:14px;margin-top:24px;border:1px solid rgba(255,255,255,.1)}
-.viewerGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px}
-.viewerButton{display:flex;align-items:center;justify-content:center;height:60px;border-radius:20px;background:white;color:#2F2118;text-decoration:none;font-weight:700;font-size:16px}
-.viewerButton.disabled{opacity:.45;pointer-events:none}
-textarea{width:100%;height:140px;background:#2F2118;border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:18px;box-sizing:border-box;color:white;font-size:15px;resize:none;margin-top:16px;outline:none;line-height:1.6}
-textarea::placeholder{color:rgba(255,255,255,.38)}
-.actionGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
-button{height:60px;border:none;border-radius:20px;font-size:17px;font-weight:700;cursor:pointer;transition:.2s}
-button:disabled{opacity:.4;cursor:not-allowed}
-.approve{background:white;color:#2F2118}
-.reject{background:#9E3E31;color:white}
-.popup{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999}
-.popupBox{width:100%;max-width:480px;background:#463426;border:1px solid rgba(255,255,255,.14);border-radius:28px;padding:28px;box-shadow:0 30px 80px rgba(0,0,0,.35);max-height:90vh;overflow:auto}
-.popupTitle{font-size:24px;font-weight:700;margin-bottom:16px}
-.popupDesc{color:rgba(255,255,255,.68);line-height:1.7;margin-bottom:22px}
-.popupButtons{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
-.cancelBtn{background:#2F2118;color:white}
-.confirmBtn{background:white;color:#2F2118}
-.confirmRejectBtn{background:#9E3E31;color:white}
-.signatureBox{background:#2F2118;border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:14px;margin-top:18px}
-.signatureLabel{font-size:13px;color:rgba(255,255,255,.58);margin-bottom:10px}
-#signatureCanvas{width:100%;height:180px;background:#fff;border-radius:14px;touch-action:none;display:block}
-.signatureActions{display:flex;justify-content:flex-end;margin-top:10px}
-.clearSignBtn{height:42px;padding:0 16px;border-radius:14px;background:#2F2118;color:white;border:1px solid rgba(255,255,255,.18);font-size:14px}
-.signatureError{color:#ffb3a8;font-size:14px;margin-top:10px;display:none}
-.passwordScreen{position:fixed;inset:0;background:#3B2A1D;display:flex;align-items:center;justify-content:center;padding:24px;z-index:10000}
-.passwordBox{width:100%;max-width:420px;background:#463426;border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:30px;box-shadow:0 30px 80px rgba(0,0,0,.28);text-align:center}
-.passwordLogo{max-width:221px;max-height:83px;object-fit:contain;margin-bottom:28px}
-.passwordTitle{font-size:24px;font-weight:700;margin-bottom:12px}
-.passwordDesc{color:rgba(255,255,255,.62);line-height:1.6;margin-bottom:24px}
-.passwordInput{width:100%;height:58px;border-radius:18px;border:1px solid rgba(255,255,255,.18);background:#2F2118;color:white;font-size:22px;text-align:center;box-sizing:border-box;outline:none;letter-spacing:6px}
-.passwordBtn{width:100%;height:58px;background:white;color:#2F2118;margin-top:14px}
-.errorText{color:#ffb3a8;font-size:14px;margin-top:14px;display:none}
-.expiredScreen{position:fixed;inset:0;background:#3B2A1D;display:none;align-items:center;justify-content:center;padding:24px;z-index:10001}
-.expiredBox{width:100%;max-width:440px;background:#463426;border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:32px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.28)}
-.expiredTitle{font-size:24px;font-weight:700;margin-bottom:14px}
-.expiredDesc{color:rgba(255,255,255,.64);line-height:1.7}
+body{
+  margin:0;
+  background:#3B2A1D;
+  color:white;
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  padding:24px;
+}
+
+.container{
+  max-width:760px;
+  margin:0 auto;
+}
+
+.logoWrap{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  margin:10px 0 34px;
+  text-align:center;
+}
+
+.logo{
+  width:270px;
+  height:auto;
+  max-width:90%;
+  object-fit:contain;
+}
+
+.logoSubText{
+  margin-top:10px;
+  font-size:10px;
+  letter-spacing:2px;
+  color:rgba(255,255,255,.58);
+  font-weight:500;
+}
+
+.card{
+  background:#463426;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:28px;
+  padding:28px;
+  margin-bottom:24px;
+  box-shadow:0 20px 60px rgba(0,0,0,.18);
+}
+
+.infoGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:22px 18px;
+}
+
+.infoFull{
+  grid-column:1 / -1;
+}
+
+.label{
+  font-size:13px;
+  color:rgba(255,255,255,.58);
+  margin-bottom:8px;
+}
+
+.value{
+  font-size:20px;
+  font-weight:500;
+  line-height:1.45;
+  word-break:keep-all;
+}
+
+.amount{
+  font-size:34px;
+  font-weight:700;
+  margin-top:8px;
+}
+
+.status{
+  display:inline-flex;
+  align-items:center;
+  padding:10px 16px;
+  border-radius:999px;
+  background:#2F2118;
+  font-size:14px;
+  margin-top:24px;
+  border:1px solid rgba(255,255,255,.1);
+}
+
+.viewerGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin-top:28px;
+}
+
+.viewerButton{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:60px;
+  border-radius:20px;
+  background:white;
+  color:#2F2118;
+  text-decoration:none;
+  font-weight:700;
+  font-size:16px;
+}
+
+.viewerButton.disabled{
+  opacity:.45;
+  pointer-events:none;
+}
+
+textarea{
+  width:100%;
+  height:140px;
+  background:#2F2118;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:20px;
+  padding:18px;
+  box-sizing:border-box;
+  color:white;
+  font-size:15px;
+  resize:none;
+  margin-top:16px;
+  outline:none;
+  line-height:1.6;
+}
+
+textarea::placeholder{
+  color:rgba(255,255,255,.38);
+}
+
+.actionGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin-top:24px;
+}
+
+button{
+  height:60px;
+  border:none;
+  border-radius:20px;
+  font-size:17px;
+  font-weight:700;
+  cursor:pointer;
+  transition:.2s;
+}
+
+button:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+}
+
+.approve{
+  background:white;
+  color:#2F2118;
+}
+
+.reject{
+  background:#9E3E31;
+  color:white;
+}
+
+.popup{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.75);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  z-index:9999;
+}
+
+.popupBox{
+  width:100%;
+  max-width:480px;
+  background:#463426;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:28px;
+  padding:28px;
+  box-shadow:0 30px 80px rgba(0,0,0,.35);
+  max-height:90vh;
+  overflow:auto;
+}
+
+.popupTitle{
+  font-size:24px;
+  font-weight:700;
+  margin-bottom:16px;
+}
+
+.popupDesc{
+  color:rgba(255,255,255,.68);
+  line-height:1.7;
+  margin-bottom:22px;
+}
+
+.popupButtons{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:20px;
+}
+
+.cancelBtn{
+  background:#2F2118;
+  color:white;
+}
+
+.confirmBtn{
+  background:white;
+  color:#2F2118;
+}
+
+.confirmRejectBtn{
+  background:#9E3E31;
+  color:white;
+}
+
+.signatureBox{
+  background:#2F2118;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:20px;
+  padding:14px;
+  margin-top:18px;
+}
+
+.signatureLabel{
+  font-size:13px;
+  color:rgba(255,255,255,.58);
+  margin-bottom:10px;
+}
+
+#signatureCanvas{
+  width:100%;
+  height:180px;
+  background:white;
+  border-radius:14px;
+  touch-action:none;
+  display:block;
+}
+
+.signatureActions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+
+.clearSignBtn{
+  height:42px;
+  padding:0 16px;
+  border-radius:14px;
+  background:#2F2118;
+  color:white;
+  border:1px solid rgba(255,255,255,.18);
+  font-size:14px;
+}
+
+.signatureError{
+  color:#ffb3a8;
+  font-size:14px;
+  margin-top:10px;
+  display:none;
+}
+
+.passwordScreen{
+  position:fixed;
+  inset:0;
+  background:#3B2A1D;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  z-index:10000;
+}
+
+.passwordBox{
+  width:100%;
+  max-width:420px;
+  background:#463426;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:28px;
+  padding:30px;
+  box-shadow:0 30px 80px rgba(0,0,0,.28);
+  text-align:center;
+}
+
+.passwordLogo{
+  max-width:221px;
+  max-height:83px;
+  object-fit:contain;
+  margin-bottom:28px;
+}
+
+.passwordTitle{
+  font-size:24px;
+  font-weight:700;
+  margin-bottom:12px;
+}
+
+.passwordDesc{
+  color:rgba(255,255,255,.62);
+  line-height:1.6;
+  margin-bottom:24px;
+}
+
+.passwordInput{
+  width:100%;
+  height:58px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.18);
+  background:#2F2118;
+  color:white;
+  font-size:22px;
+  text-align:center;
+  box-sizing:border-box;
+  outline:none;
+  letter-spacing:6px;
+}
+
+.passwordBtn{
+  width:100%;
+  height:58px;
+  background:white;
+  color:#2F2118;
+  margin-top:14px;
+}
+
+.errorText{
+  color:#ffb3a8;
+  font-size:14px;
+  margin-top:14px;
+  display:none;
+}
+
+.expiredScreen{
+  position:fixed;
+  inset:0;
+  background:#3B2A1D;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  z-index:10001;
+}
+
+.expiredBox{
+  width:100%;
+  max-width:440px;
+  background:#463426;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:28px;
+  padding:32px;
+  text-align:center;
+  box-shadow:0 30px 80px rgba(0,0,0,.28);
+}
+
+.expiredTitle{
+  font-size:24px;
+  font-weight:700;
+  margin-bottom:14px;
+}
+
+.expiredDesc{
+  color:rgba(255,255,255,.64);
+  line-height:1.7;
+}
+
 @media(max-width:640px){
-body{padding:16px}
-.logo{width:270px;height:auto;max-width:90%}
-.logoSubText{font-size:8px;letter-spacing:1.6px}
-.passwordLogo{max-width:190px;max-height:72px}
-.infoGrid{grid-template-columns:1fr}
-.infoFull{grid-column:auto}
-.viewerGrid{grid-template-columns:1fr}
-.actionGrid{grid-template-columns:1fr}
-.amount{font-size:28px}
-.card{padding:24px;border-radius:24px}
-.popupBox{padding:24px;border-radius:24px}
-#signatureCanvas{height:160px}
+  body{
+    padding:16px;
+  }
+
+  .logo{
+    width:270px;
+    height:auto;
+    max-width:90%;
+  }
+
+  .logoSubText{
+    font-size:8px;
+    letter-spacing:1.6px;
+  }
+
+  .passwordLogo{
+    max-width:190px;
+    max-height:72px;
+  }
+
+  .infoGrid{
+    grid-template-columns:1fr;
+  }
+
+  .infoFull{
+    grid-column:auto;
+  }
+
+  .viewerGrid{
+    grid-template-columns:1fr;
+  }
+
+  .actionGrid{
+    grid-template-columns:1fr;
+  }
+
+  .amount{
+    font-size:28px;
+  }
+
+  .card{
+    padding:24px;
+    border-radius:24px;
+  }
+
+  .popupBox{
+    padding:24px;
+    border-radius:24px;
+  }
+
+  #signatureCanvas{
+    height:160px;
+  }
 }
 </style>
 </head>
@@ -78,19 +440,46 @@ body{padding:16px}
 <div class="passwordScreen" id="passwordScreen">
   <div class="passwordBox">
     <img src="./logo_white.svg" class="passwordLogo" alt="RVDH Logo">
-    <div class="passwordTitle">열람 비밀번호 입력</div>
-    <div class="passwordDesc">승인 문서를 확인하기 위해<br>열람 비밀번호를 입력해주세요.</div>
-    <input id="passwordInput" class="passwordInput" type="password" inputmode="numeric" placeholder="••••">
-    <button class="passwordBtn" id="passwordBtn">확인</button>
-    <div class="errorText" id="passwordError">비밀번호가 올바르지 않습니다.</div>
+
+    <div class="passwordTitle">
+      열람 비밀번호 입력
+    </div>
+
+    <div class="passwordDesc">
+      승인 문서를 확인하기 위해<br>
+      열람 비밀번호를 입력해주세요.
+    </div>
+
+    <input
+      id="passwordInput"
+      class="passwordInput"
+      type="password"
+      inputmode="numeric"
+      placeholder="••••"
+    >
+
+    <button class="passwordBtn" id="passwordBtn">
+      확인
+    </button>
+
+    <div class="errorText" id="passwordError">
+      비밀번호가 올바르지 않습니다.
+    </div>
   </div>
 </div>
 
 <div class="expiredScreen" id="expiredScreen">
   <div class="expiredBox">
     <img src="./logo_white.svg" class="passwordLogo" alt="RVDH Logo">
-    <div class="expiredTitle">만료된 승인 링크입니다</div>
-    <div class="expiredDesc">이 승인 페이지의 열람 가능 기간이 종료되었습니다.<br>필요한 경우 담당자에게 새 승인 링크를 요청해주세요.</div>
+
+    <div class="expiredTitle">
+      만료된 승인 링크입니다
+    </div>
+
+    <div class="expiredDesc">
+      이 승인 페이지의 열람 가능 기간이 종료되었습니다.<br>
+      필요한 경우 담당자에게 새 승인 링크를 요청해주세요.
+    </div>
   </div>
 </div>
 
@@ -98,7 +487,9 @@ body{padding:16px}
   <div class="logoWrap">
     <div>
       <img src="./logo_white.svg" class="logo" alt="RVDH Logo">
-      <div class="logoSubText">Vendor Invoice Approval</div>
+      <div class="logoSubText">
+        Vendor Invoice Approval
+      </div>
     </div>
   </div>
 
@@ -108,74 +499,144 @@ body{padding:16px}
         <div class="label">현장 코드</div>
         <div class="value" id="siteCode">-</div>
       </div>
+
       <div>
         <div class="label">현장 주소</div>
         <div class="value" id="siteAddress">-</div>
       </div>
+
       <div>
         <div class="label">업체명</div>
         <div class="value" id="vendorName">-</div>
       </div>
+
       <div>
         <div class="label">담당자</div>
         <div class="value" id="manager">-</div>
       </div>
+
       <div class="infoFull">
         <div class="label">청구 금액 (VAT 포함)</div>
         <div class="amount" id="amount">-</div>
       </div>
     </div>
 
-    <div class="status" id="status">검토중</div>
+    <div class="status" id="status">
+      검토중
+    </div>
 
     <div class="viewerGrid">
-      <a id="orderButton" class="viewerButton" target="_blank" rel="noopener noreferrer">발주서 보기</a>
-      <a id="specButton" class="viewerButton" target="_blank" rel="noopener noreferrer">명세서 보기</a>
+      <a
+        id="orderButton"
+        class="viewerButton"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        발주서 보기
+      </a>
+
+      <a
+        id="specButton"
+        class="viewerButton"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        명세서 보기
+      </a>
     </div>
   </div>
 
   <div class="card">
-    <div class="label">승인 메모</div>
-    <textarea id="comment" placeholder="승인 시 참고할 메모가 있다면 입력해주세요."></textarea>
+    <div class="label">
+      승인 메모
+    </div>
+
+    <textarea
+      id="comment"
+      placeholder="승인 시 참고할 메모가 있다면 입력해주세요."
+    ></textarea>
 
     <div class="actionGrid">
-      <button class="approve" id="approveBtn">승인하기</button>
-      <button class="reject" id="rejectBtn">반려하기</button>
+      <button class="approve" id="approveBtn">
+        승인하기
+      </button>
+
+      <button class="reject" id="rejectBtn">
+        반려하기
+      </button>
     </div>
   </div>
 </div>
 
 <div class="popup" id="confirmPopup">
   <div class="popupBox">
-    <div class="popupTitle">승인하시겠습니까?</div>
-    <div class="popupDesc">승인 완료 후에는 수정이 불가능합니다.<br><br>발주서와 명세서 내용을 다시 한번 확인한 뒤, 아래 서명란에 서명해주세요.</div>
+    <div class="popupTitle">
+      승인하시겠습니까?
+    </div>
+
+    <div class="popupDesc">
+      승인 완료 후에는 수정이 불가능합니다.<br><br>
+      발주서와 명세서 내용을 다시 한번 확인한 뒤, 아래 서명란에 서명해주세요.
+    </div>
 
     <div class="signatureBox">
-      <div class="signatureLabel">승인 서명</div>
-      <canvas id="signatureCanvas"></canvas>
-      <div class="signatureActions">
-        <button class="clearSignBtn" onclick="clearSignature()">서명 지우기</button>
+      <div class="signatureLabel">
+        승인 서명
       </div>
-      <div class="signatureError" id="signatureError">승인을 진행하려면 서명이 필요합니다.</div>
+
+      <canvas id="signatureCanvas"></canvas>
+
+      <div class="signatureActions">
+        <button class="clearSignBtn" onclick="clearSignature()">
+          서명 지우기
+        </button>
+      </div>
+
+      <div class="signatureError" id="signatureError">
+        승인을 진행하려면 서명이 필요합니다.
+      </div>
     </div>
 
     <div class="popupButtons">
-      <button class="cancelBtn" onclick="closeApprovePopup()">취소</button>
-      <button class="confirmBtn" onclick="confirmApproval()">최종 승인</button>
+      <button class="cancelBtn" onclick="closeApprovePopup()">
+        취소
+      </button>
+
+      <button class="confirmBtn" onclick="confirmApproval()">
+        최종 승인
+      </button>
     </div>
   </div>
 </div>
 
 <div class="popup" id="rejectPopup">
   <div class="popupBox">
-    <div class="popupTitle">반려 사유 작성</div>
-    <div class="popupDesc">반려 처리 시 사유를 반드시 작성해주세요.<br>작성한 내용은 담당자에게 전달됩니다.</div>
-    <textarea id="rejectReason" placeholder="반려 사유를 입력해주세요."></textarea>
-    <div class="errorText" id="rejectError">반려 사유를 입력해주세요.</div>
+    <div class="popupTitle">
+      반려 사유 작성
+    </div>
+
+    <div class="popupDesc">
+      반려 처리 시 사유를 반드시 작성해주세요.<br>
+      작성한 내용은 담당자에게 전달됩니다.
+    </div>
+
+    <textarea
+      id="rejectReason"
+      placeholder="반려 사유를 입력해주세요."
+    ></textarea>
+
+    <div class="errorText" id="rejectError">
+      반려 사유를 입력해주세요.
+    </div>
 
     <div class="popupButtons">
-      <button class="cancelBtn" onclick="closeRejectPopup()">취소</button>
-      <button class="confirmRejectBtn" onclick="confirmReject()">반려 확정</button>
+      <button class="cancelBtn" onclick="closeRejectPopup()">
+        취소
+      </button>
+
+      <button class="confirmRejectBtn" onclick="confirmReject()">
+        반려 확정
+      </button>
     </div>
   </div>
 </div>
@@ -183,8 +644,8 @@ body{padding:16px}
 <script>
 const ACCESS_PASSWORD = '0723';
 
-/* 새 Make Webhook URL로 교체 */
-const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/rd01hisy4ybfqgqy6m7xq2495oq8brh7';
+/* 새 Make Webhook URL로 교체하세요 */
+const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/REPLACE_WITH_NEW_WEBHOOK';
 
 const params = new URLSearchParams(window.location.search);
 
@@ -194,6 +655,7 @@ function getParam(name, fallback = ''){
 
 function safeDecode(value, fallback = '-'){
   if(!value) return fallback;
+
   try{
     return decodeURIComponent(value);
   }catch(e){
@@ -240,8 +702,11 @@ setViewerButton(specButton, specViewer, '명세서 없음');
 
 function checkExpiration(){
   if(!expires) return false;
+
   const expireDate = new Date(expires);
+
   if(isNaN(expireDate.getTime())) return false;
+
   return new Date() > expireDate;
 }
 
@@ -254,6 +719,7 @@ function showExpired(){
 function unlockPage(){
   document.getElementById('passwordScreen').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
+
   setTimeout(resizeSignatureCanvas, 200);
 }
 
@@ -271,7 +737,9 @@ function checkPassword(){
 document.getElementById('passwordBtn').addEventListener('click', checkPassword);
 
 document.getElementById('passwordInput').addEventListener('keydown', function(e){
-  if(e.key === 'Enter') checkPassword();
+  if(e.key === 'Enter'){
+    checkPassword();
+  }
 });
 
 if(checkExpiration()){
@@ -292,12 +760,14 @@ const rejectPopup = document.getElementById('rejectPopup');
 document.getElementById('approveBtn').addEventListener('click', function(){
   approvePopup.style.display = 'flex';
   document.getElementById('signatureError').style.display = 'none';
+
   setTimeout(resizeSignatureCanvas, 100);
 });
 
 document.getElementById('rejectBtn').addEventListener('click', function(){
   document.getElementById('rejectReason').value = '';
   document.getElementById('rejectError').style.display = 'none';
+
   rejectPopup.style.display = 'flex';
 });
 
@@ -334,9 +804,11 @@ function resizeSignatureCanvas(){
 
   if(currentImage){
     const image = new Image();
+
     image.onload = function(){
       signatureCtx.drawImage(image, 0, 0, rect.width, rect.height);
     };
+
     image.src = currentImage;
   }
 }
