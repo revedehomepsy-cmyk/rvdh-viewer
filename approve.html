@@ -652,18 +652,10 @@ button:disabled{
 const ACCESS_PASSWORD = '0723';
 
 /*
-  승인/반려 처리용 Webhook URL
-  기존 승인 결과 처리 시나리오 URL입니다.
+  승인/반려 처리용 Make Webhook URL
+  승인 결과를 받는 시나리오 Webhook URL로 교체하세요.
 */
-const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/lgeq9uomz57r76oj4o16qldmk6gjjwla';
-
-/*
-  승인 상세 조회용 Webhook URL
-  Make 새 시나리오:
-  Custom Webhook → Data Store Get a record → Webhook Response
-  이 URL로 반드시 교체해야 합니다.
-*/
-const DETAIL_WEBHOOK_URL = 'https://hook.eu1.make.com/여기에_조회용_웹훅_URL';
+const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/jjmvn45ltyb1k9tbyyze9iwgk55wvaho';
 
 const params = new URLSearchParams(window.location.search);
 
@@ -671,18 +663,28 @@ function getParam(name, fallback = ''){
   return params.get(name) || fallback;
 }
 
-const approvalId = getParam('id', '');
+function safeDecode(value, fallback = '-'){
+  if(!value) return fallback;
 
-let approvalToken = '';
-let siteCode = '-';
-let siteAddress = '-';
-let manager = '-';
-let vendorName = '-';
-let amount = '-';
-let orderViewer = '';
-let specViewer = '';
-let expires = '';
-let dataLoaded = false;
+  try{
+    return decodeURIComponent(value);
+  }catch(e){
+    return value || fallback;
+  }
+}
+
+const approvalId = getParam('id', '');
+const approvalToken = getParam('token', '');
+
+const siteCode = safeDecode(getParam('siteCode') || getParam('project'), '-');
+const siteAddress = safeDecode(getParam('address'), '-');
+const manager = safeDecode(getParam('manager'), '-');
+const vendorName = safeDecode(getParam('vendor'), '-');
+const amount = safeDecode(getParam('amount'), '-');
+
+const orderViewer = safeDecode(getParam('order'), '');
+const specViewer = safeDecode(getParam('spec'), '');
+const expires = safeDecode(getParam('expires'), '');
 
 const orderButton = document.getElementById('orderButton');
 const specButton = document.getElementById('specButton');
@@ -699,69 +701,15 @@ function setViewerButton(button, url, emptyText){
   }
 }
 
-function applyApprovalData(data){
-  approvalToken = data.token || '';
-
-  siteCode = data.siteCode || '-';
-  siteAddress = data.address || '-';
-  manager = data.manager || '-';
-  vendorName = data.vendor || '-';
-  amount = data.amount || '-';
-  orderViewer = data.orderViewerUrl || '';
-  specViewer = data.specViewerUrl || '';
-  expires = data.expires || '';
-
+function applyApprovalData(){
   document.getElementById('siteCode').innerText = siteCode;
   document.getElementById('siteAddress').innerText = siteAddress;
   document.getElementById('manager').innerText = manager;
   document.getElementById('vendorName').innerText = vendorName;
   document.getElementById('amount').innerText = amount;
 
-  if(data.status){
-    document.getElementById('status').innerText = data.status;
-  }
-
   setViewerButton(orderButton, orderViewer, '발주서 없음');
   setViewerButton(specButton, specViewer, '명세서 없음');
-
-  dataLoaded = true;
-}
-
-async function loadApprovalData(){
-  if(dataLoaded){
-    return;
-  }
-
-  if(!approvalId){
-    alert('승인 ID가 없습니다.');
-    return;
-  }
-
-  try{
-    const response = await fetch(
-      `${DETAIL_WEBHOOK_URL}?id=${encodeURIComponent(approvalId)}`
-    );
-
-    if(!response.ok){
-      throw new Error('Failed to load approval data');
-    }
-
-    const data = await response.json();
-
-    if(data.success === false){
-      throw new Error(data.message || 'Approval data not found');
-    }
-
-    applyApprovalData(data);
-
-    if(checkExpiration()){
-      showExpired();
-    }
-
-  }catch(error){
-    console.error(error);
-    alert('승인 정보를 불러오지 못했습니다. 담당자에게 문의해주세요.');
-  }
 }
 
 function checkExpiration(){
@@ -780,11 +728,16 @@ function showExpired(){
   document.getElementById('mainContent').style.display = 'none';
 }
 
-async function unlockPage(){
+function unlockPage(){
   document.getElementById('passwordScreen').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
 
-  await loadApprovalData();
+  applyApprovalData();
+
+  if(checkExpiration()){
+    showExpired();
+    return;
+  }
 
   setTimeout(resizeSignatureCanvas, 200);
 }
@@ -818,12 +771,16 @@ window.addEventListener('load', function(){
   }
 });
 
-const unlocked = sessionStorage.getItem('rvdh_approval_unlocked_' + approvalId);
-
-if(unlocked === 'true'){
-  unlockPage();
+if(checkExpiration()){
+  showExpired();
 }else{
-  document.getElementById('mainContent').style.display = 'none';
+  const unlocked = sessionStorage.getItem('rvdh_approval_unlocked_' + approvalId);
+
+  if(unlocked === 'true'){
+    unlockPage();
+  }else{
+    document.getElementById('mainContent').style.display = 'none';
+  }
 }
 
 const approvePopup = document.getElementById('confirmPopup');
@@ -973,10 +930,6 @@ async function confirmReject(){
 }
 
 async function sendWebhook(status, rejectReasonText = '', signatureImage = ''){
-  if(!dataLoaded){
-    await loadApprovalData();
-  }
-
   if(checkExpiration()){
     showExpired();
     return;
