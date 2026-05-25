@@ -139,6 +139,20 @@ textarea::placeholder{
   color:rgba(255,255,255,.38);
 }
 
+select{
+  width:100%;
+  height:56px;
+  background:#2F2118;
+  color:white;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:18px;
+  padding:0 16px;
+  box-sizing:border-box;
+  font-size:15px;
+  outline:none;
+  margin-top:12px;
+}
+
 .actionGrid{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -169,6 +183,53 @@ button:disabled{
 .reject{
   background:#9E3E31;
   color:white;
+}
+
+.reassign{
+  background:#2F2118;
+  color:white;
+  border:1px solid rgba(255,255,255,.18);
+  grid-column:1 / -1;
+}
+
+.uploadCardTitle{
+  font-size:20px;
+  font-weight:700;
+  margin-bottom:10px;
+}
+
+.uploadDesc{
+  color:rgba(255,255,255,.62);
+  line-height:1.7;
+  font-size:14px;
+  margin-bottom:18px;
+}
+
+.fileInputBox{
+  background:#2F2118;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:20px;
+  padding:18px;
+}
+
+.fileInput{
+  width:100%;
+  color:white;
+  font-size:15px;
+}
+
+.uploadBtn{
+  width:100%;
+  background:white;
+  color:#2F2118;
+  margin-top:16px;
+}
+
+.uploadStatus{
+  color:rgba(255,255,255,.68);
+  font-size:14px;
+  margin-top:12px;
+  line-height:1.6;
 }
 
 .popup{
@@ -226,6 +287,11 @@ button:disabled{
 .confirmRejectBtn{
   background:#9E3E31;
   color:white;
+}
+
+.confirmReassignBtn{
+  background:white;
+  color:#2F2118;
 }
 
 .signatureBox{
@@ -377,12 +443,6 @@ button:disabled{
   line-height:1.7;
 }
 
-.loadingText{
-  text-align:center;
-  color:rgba(255,255,255,.7);
-  padding:40px 0;
-}
-
 @media(max-width:640px){
   body{
     padding:16px;
@@ -418,6 +478,10 @@ button:disabled{
 
   .actionGrid{
     grid-template-columns:1fr;
+  }
+
+  .reassign{
+    grid-column:auto;
   }
 
   .amount{
@@ -554,6 +618,34 @@ button:disabled{
   </div>
 
   <div class="card">
+    <div class="uploadCardTitle">
+      최종 견적서 업로드
+    </div>
+
+    <div class="uploadDesc">
+      담당자는 최종 확인된 견적서를 이곳에 업로드할 수 있습니다.<br>
+      업로드된 파일은 Make를 통해 OneDrive에 저장되고, Notion에 링크로 기록될 예정입니다.
+    </div>
+
+    <div class="fileInputBox">
+      <input
+        type="file"
+        id="finalEstimateFile"
+        class="fileInput"
+        accept=".pdf,.xlsx,.xls,.doc,.docx,.jpg,.jpeg,.png,.webp"
+      >
+    </div>
+
+    <button class="uploadBtn" id="uploadFinalEstimateBtn">
+      최종 견적서 업로드
+    </button>
+
+    <div class="uploadStatus" id="uploadStatus">
+      아직 업로드된 최종 견적서가 없습니다.
+    </div>
+  </div>
+
+  <div class="card">
     <div class="label">
       승인 메모
     </div>
@@ -570,6 +662,10 @@ button:disabled{
 
       <button class="reject" id="rejectBtn">
         반려하기
+      </button>
+
+      <button class="reassign" id="reassignBtn">
+        재할당하기
       </button>
     </div>
   </div>
@@ -648,14 +744,67 @@ button:disabled{
   </div>
 </div>
 
+<div class="popup" id="reassignPopup">
+  <div class="popupBox">
+    <div class="popupTitle">
+      담당자 재할당
+    </div>
+
+    <div class="popupDesc">
+      담당자가 잘못 지정된 경우, 아래에서 새 담당자를 선택하고 재할당 사유를 작성해주세요.<br>
+      재할당 내역은 Teams와 Notion에 기록될 예정입니다.
+    </div>
+
+    <div class="label">새 담당자</div>
+    <select id="newManager">
+      <option value="">담당자를 선택해주세요</option>
+      <option value="박세윤">박세윤</option>
+      <option value="선혜림">선혜림</option>
+      <option value="희진">희진</option>
+      <option value="현장팀">현장팀</option>
+      <option value="디자인팀">디자인팀</option>
+    </select>
+
+    <textarea
+      id="reassignReason"
+      placeholder="재할당 사유를 입력해주세요. 예: 협력업체가 담당자를 잘못 지정함"
+    ></textarea>
+
+    <div class="errorText" id="reassignError">
+      새 담당자와 재할당 사유를 모두 입력해주세요.
+    </div>
+
+    <div class="popupButtons">
+      <button class="cancelBtn" onclick="closeReassignPopup()">
+        취소
+      </button>
+
+      <button class="confirmReassignBtn" onclick="confirmReassign()">
+        재할당 확정
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 const ACCESS_PASSWORD = '0723';
 
 /*
   승인/반려 처리용 Make Webhook URL
-  승인 결과를 받는 시나리오 Webhook URL로 교체하세요.
 */
-const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/rd01hisy4ybfqgqy6m7xq2495oq8brh7';
+const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/승인_반려용_WEBHOOK_URL';
+
+/*
+  재할당 처리용 Make Webhook URL
+  나중에 Make에서 재할당 시나리오를 만든 후 교체하세요.
+*/
+const REASSIGN_WEBHOOK_URL = 'https://hook.eu1.make.com/재할당_WEBHOOK_URL';
+
+/*
+  최종 견적서 업로드용 Make Webhook URL
+  나중에 Make에서 업로드 시나리오를 만든 후 교체하세요.
+*/
+const FINAL_ESTIMATE_UPLOAD_WEBHOOK_URL = 'https://hook.eu1.make.com/최종견적서업로드_WEBHOOK_URL';
 
 const params = new URLSearchParams(window.location.search);
 
@@ -785,6 +934,7 @@ if(checkExpiration()){
 
 const approvePopup = document.getElementById('confirmPopup');
 const rejectPopup = document.getElementById('rejectPopup');
+const reassignPopup = document.getElementById('reassignPopup');
 
 document.getElementById('approveBtn').addEventListener('click', function(){
   approvePopup.style.display = 'flex';
@@ -800,12 +950,26 @@ document.getElementById('rejectBtn').addEventListener('click', function(){
   rejectPopup.style.display = 'flex';
 });
 
+document.getElementById('reassignBtn').addEventListener('click', function(){
+  document.getElementById('newManager').value = '';
+  document.getElementById('reassignReason').value = '';
+  document.getElementById('reassignError').style.display = 'none';
+
+  reassignPopup.style.display = 'flex';
+});
+
+document.getElementById('uploadFinalEstimateBtn').addEventListener('click', uploadFinalEstimate);
+
 function closeApprovePopup(){
   approvePopup.style.display = 'none';
 }
 
 function closeRejectPopup(){
   rejectPopup.style.display = 'none';
+}
+
+function closeReassignPopup(){
+  reassignPopup.style.display = 'none';
 }
 
 const signatureCanvas = document.getElementById('signatureCanvas');
@@ -927,6 +1091,112 @@ async function confirmReject(){
   rejectPopup.style.display = 'none';
 
   await sendWebhook('rejected', reason, '');
+}
+
+async function confirmReassign(){
+  const newManager = document.getElementById('newManager').value;
+  const reason = document.getElementById('reassignReason').value.trim();
+
+  if(!newManager || !reason){
+    document.getElementById('reassignError').style.display = 'block';
+    return;
+  }
+
+  const confirmButton = document.querySelector('.confirmReassignBtn');
+  confirmButton.disabled = true;
+
+  try{
+    const response = await fetch(REASSIGN_WEBHOOK_URL,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify({
+        type:'reassign',
+        id: approvalId,
+        token: approvalToken,
+        siteCode: siteCode,
+        siteAddress: siteAddress,
+        vendor: vendorName,
+        amount: amount,
+        currentManager: manager,
+        newManager: newManager,
+        reason: reason,
+        order: orderViewer,
+        spec: specViewer,
+        submittedAt: new Date().toISOString()
+      })
+    });
+
+    if(!response.ok){
+      throw new Error('Reassign webhook failed');
+    }
+
+    closeReassignPopup();
+
+    document.getElementById('status').innerText = '재할당';
+    document.getElementById('manager').innerText = newManager;
+
+    alert('재할당 요청이 완료되었습니다.');
+
+  }catch(error){
+    console.error(error);
+    alert('재할당 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+  }finally{
+    confirmButton.disabled = false;
+  }
+}
+
+async function uploadFinalEstimate(){
+  const fileInput = document.getElementById('finalEstimateFile');
+  const uploadStatus = document.getElementById('uploadStatus');
+  const uploadBtn = document.getElementById('uploadFinalEstimateBtn');
+
+  const file = fileInput.files[0];
+
+  if(!file){
+    uploadStatus.innerText = '업로드할 최종 견적서 파일을 선택해주세요.';
+    return;
+  }
+
+  const formData = new FormData();
+
+  formData.append('type', 'finalEstimateUpload');
+  formData.append('id', approvalId);
+  formData.append('token', approvalToken);
+  formData.append('siteCode', siteCode);
+  formData.append('siteAddress', siteAddress);
+  formData.append('vendor', vendorName);
+  formData.append('manager', manager);
+  formData.append('amount', amount);
+  formData.append('fileName', file.name);
+  formData.append('fileSize', String(file.size));
+  formData.append('uploadedAt', new Date().toISOString());
+  formData.append('file', file);
+
+  uploadBtn.disabled = true;
+  uploadStatus.innerText = '최종 견적서를 업로드 중입니다. 잠시만 기다려주세요.';
+
+  try{
+    const response = await fetch(FINAL_ESTIMATE_UPLOAD_WEBHOOK_URL,{
+      method:'POST',
+      body:formData
+    });
+
+    if(!response.ok){
+      throw new Error('Upload webhook failed');
+    }
+
+    uploadStatus.innerText = '최종 견적서 업로드가 완료되었습니다.';
+    alert('최종 견적서가 업로드되었습니다.');
+
+  }catch(error){
+    console.error(error);
+    uploadStatus.innerText = '업로드 중 오류가 발생했습니다. 다시 시도해주세요.';
+    alert('최종 견적서 업로드 중 오류가 발생했습니다.');
+  }finally{
+    uploadBtn.disabled = false;
+  }
 }
 
 async function sendWebhook(status, rejectReasonText = '', signatureImage = ''){
