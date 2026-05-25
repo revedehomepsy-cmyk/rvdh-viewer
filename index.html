@@ -31,18 +31,6 @@ body{
   opacity:.8;
 }
 
-.debug{
-  background:#463426;
-  border:1px solid rgba(255,255,255,.16);
-  border-radius:14px;
-  padding:14px;
-  margin-bottom:20px;
-  font-size:13px;
-  line-height:1.6;
-  color:rgba(255,255,255,.75);
-  word-break:break-all;
-}
-
 .imageWrap{
   margin-bottom:24px;
   background:#463426;
@@ -62,6 +50,33 @@ body{
   user-select:none;
 }
 
+.fileWrap{
+  margin-bottom:14px;
+  background:#463426;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:18px;
+  padding:18px;
+}
+
+.fileTitle{
+  font-size:14px;
+  color:rgba(255,255,255,.65);
+  margin-bottom:12px;
+}
+
+.fileButton{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:58px;
+  border-radius:16px;
+  background:white;
+  color:#2f2118;
+  text-decoration:none;
+  font-weight:700;
+  font-size:16px;
+}
+
 .pageLabel{
   font-size:13px;
   color:rgba(255,255,255,.6);
@@ -73,13 +88,6 @@ body{
   padding:80px 20px;
   color:rgba(255,255,255,.65);
 }
-
-.error{
-  color:#ffb3a8;
-  font-size:14px;
-  line-height:1.6;
-  word-break:break-all;
-}
 </style>
 </head>
 
@@ -90,65 +98,45 @@ body{
     <div class="title">RVDH DOCUMENT VIEWER</div>
   </div>
 
-  <div id="debug" class="debug"></div>
   <div id="content"></div>
 </div>
 
 <script>
 const params = new URLSearchParams(window.location.search);
 
-const rawSingleImg = params.get('img') || '';
-const rawMultiImgs = params.get('imgs') || '';
+const singleImg = params.get('img');
+const multiImgs = params.get('imgs');
+const mixedItems = params.get('items');
 
-const debug = document.getElementById('debug');
 const content = document.getElementById('content');
 
-function safeDecode(value){
+function decodeSafe(value){
   if(!value) return '';
 
-  let result = value;
-
-  for(let i = 0; i < 3; i++){
-    try{
-      const decoded = decodeURIComponent(result);
-      if(decoded === result) break;
-      result = decoded;
-    }catch(e){
-      break;
-    }
+  try{
+    return decodeURIComponent(value);
+  }catch(e){
+    return value;
   }
-
-  return result;
 }
 
-function splitImageUrls(value){
-  const decoded = safeDecode(value);
-
-  return decoded
-    .split('|')
-    .map(v => v.trim())
-    .filter(Boolean);
-}
-
-function renderDebug(urls){
-  debug.innerHTML = `
-    <b>viewer loaded</b><br>
-    img: ${rawSingleImg ? '있음' : '없음'}<br>
-    imgs: ${rawMultiImgs ? '있음' : '없음'}<br>
-    image count: ${urls.length}<br>
-    ${urls.map((url, i) => `${i + 1}. ${url}`).join('<br>')}
-  `;
+function renderEmpty(){
+  content.innerHTML = '<div class="empty">표시할 문서가 없습니다.</div>';
 }
 
 function renderImages(urls){
   content.innerHTML = '';
 
-  if(!urls.length){
-    content.innerHTML = '<div class="empty">표시할 이미지가 없습니다.</div>';
+  const cleanUrls = urls
+    .map(v => v.trim())
+    .filter(Boolean);
+
+  if(!cleanUrls.length){
+    renderEmpty();
     return;
   }
 
-  urls.forEach((url, index) => {
+  cleanUrls.forEach((url, index) => {
     const wrap = document.createElement('div');
     wrap.className = 'imageWrap';
 
@@ -162,32 +150,101 @@ function renderImages(urls){
 
     img.addEventListener('dragstart', e => e.preventDefault());
 
-    img.onerror = function(){
-      wrap.innerHTML = `
-        <div class="pageLabel">${index + 1} 페이지</div>
-        <div class="error">
-          이미지를 불러오지 못했습니다.<br>
-          ${url}
-        </div>
-      `;
-    };
-
     wrap.appendChild(label);
     wrap.appendChild(img);
     content.appendChild(wrap);
   });
 }
 
-let imageUrls = [];
+function renderItems(items){
+  content.innerHTML = '';
 
-if(rawMultiImgs){
-  imageUrls = splitImageUrls(rawMultiImgs);
-}else if(rawSingleImg){
-  imageUrls = [safeDecode(rawSingleImg)];
+  const cleanItems = items
+    .map(v => v.trim())
+    .filter(Boolean);
+
+  if(!cleanItems.length){
+    renderEmpty();
+    return;
+  }
+
+  cleanItems.forEach((item, index) => {
+    const separatorIndex = item.indexOf('::');
+
+    let type = 'link';
+    let url = item;
+
+    if(separatorIndex > -1){
+      type = item.slice(0, separatorIndex).trim();
+      url = item.slice(separatorIndex + 2).trim();
+    }
+
+    if(!url) return;
+
+    if(type === 'image' || type === 'img'){
+      const wrap = document.createElement('div');
+      wrap.className = 'imageWrap';
+
+      const label = document.createElement('div');
+      label.className = 'pageLabel';
+      label.textContent = `${index + 1} 페이지`;
+
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = `${index + 1} 페이지`;
+
+      img.addEventListener('dragstart', e => e.preventDefault());
+
+      wrap.appendChild(label);
+      wrap.appendChild(img);
+      content.appendChild(wrap);
+      return;
+    }
+
+    const wrap = document.createElement('div');
+    wrap.className = 'fileWrap';
+
+    const title = document.createElement('div');
+    title.className = 'fileTitle';
+
+    if(type === 'pdf'){
+      title.textContent = `${index + 1}번 PDF 문서`;
+    }else{
+      title.textContent = `${index + 1}번 첨부파일`;
+    }
+
+    const button = document.createElement('a');
+    button.className = 'fileButton';
+    button.href = url;
+    button.target = '_blank';
+    button.rel = 'noopener noreferrer';
+    button.textContent = '파일 보기';
+
+    wrap.appendChild(title);
+    wrap.appendChild(button);
+    content.appendChild(wrap);
+  });
+
+  if(!content.children.length){
+    renderEmpty();
+  }
 }
 
-renderDebug(imageUrls);
-renderImages(imageUrls);
+if(mixedItems){
+  const decoded = decodeSafe(mixedItems);
+  const items = decoded.split('|');
+
+  renderItems(items);
+}else if(multiImgs){
+  const decoded = decodeSafe(multiImgs);
+  const urls = decoded.split('|');
+
+  renderImages(urls);
+}else if(singleImg){
+  renderImages([decodeSafe(singleImg)]);
+}else{
+  renderEmpty();
+}
 </script>
 
 </body>
