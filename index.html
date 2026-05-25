@@ -31,6 +31,12 @@ body{
   opacity:.8;
 }
 
+.subTitle{
+  margin-top:8px;
+  font-size:13px;
+  color:rgba(255,255,255,.55);
+}
+
 .imageWrap{
   margin-bottom:24px;
   background:#463426;
@@ -51,7 +57,7 @@ body{
 }
 
 .fileWrap{
-  margin-bottom:14px;
+  margin-bottom:24px;
   background:#463426;
   border:1px solid rgba(255,255,255,.12);
   border-radius:18px;
@@ -62,6 +68,29 @@ body{
   font-size:14px;
   color:rgba(255,255,255,.65);
   margin-bottom:12px;
+}
+
+.previewFrame{
+  width:100%;
+  height:720px;
+  border:0;
+  border-radius:14px;
+  background:white;
+  display:block;
+}
+
+.openButton{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:52px;
+  border-radius:14px;
+  background:white;
+  color:#2f2118;
+  text-decoration:none;
+  font-weight:700;
+  font-size:15px;
+  margin-top:12px;
 }
 
 .fileButton{
@@ -88,6 +117,33 @@ body{
   padding:80px 20px;
   color:rgba(255,255,255,.65);
 }
+
+.notice{
+  font-size:13px;
+  color:rgba(255,255,255,.55);
+  line-height:1.6;
+  margin-top:10px;
+}
+
+@media(max-width:640px){
+  body{
+    padding:16px;
+  }
+
+  .previewFrame{
+    height:560px;
+  }
+
+  .fileWrap{
+    padding:14px;
+    border-radius:16px;
+  }
+
+  .imageWrap{
+    padding:10px;
+    border-radius:16px;
+  }
+}
 </style>
 </head>
 
@@ -96,6 +152,7 @@ body{
 <div class="viewer">
   <div class="header">
     <div class="title">RVDH DOCUMENT VIEWER</div>
+    <div class="subTitle">Document Preview</div>
   </div>
 
   <div id="content"></div>
@@ -113,11 +170,19 @@ const content = document.getElementById('content');
 function decodeSafe(value){
   if(!value) return '';
 
-  try{
-    return decodeURIComponent(value);
-  }catch(e){
-    return value;
+  let result = value;
+
+  for(let i = 0; i < 3; i++){
+    try{
+      const decoded = decodeURIComponent(result);
+      if(decoded === result) break;
+      result = decoded;
+    }catch(e){
+      break;
+    }
   }
+
+  return result;
 }
 
 function renderEmpty(){
@@ -150,6 +215,25 @@ function renderImages(urls){
 
     img.addEventListener('dragstart', e => e.preventDefault());
 
+    img.onerror = function(){
+      wrap.innerHTML = `
+        <div class="pageLabel">${index + 1} 페이지</div>
+        <div class="notice">
+          이미지를 불러오지 못했습니다.<br>
+          아래 버튼으로 새 창에서 확인해주세요.
+        </div>
+      `;
+
+      const button = document.createElement('a');
+      button.className = 'openButton';
+      button.href = url;
+      button.target = '_blank';
+      button.rel = 'noopener noreferrer';
+      button.textContent = '새 창으로 열기';
+
+      wrap.appendChild(button);
+    };
+
     wrap.appendChild(label);
     wrap.appendChild(img);
     content.appendChild(wrap);
@@ -175,7 +259,7 @@ function renderItems(items){
     let url = item;
 
     if(separatorIndex > -1){
-      type = item.slice(0, separatorIndex).trim();
+      type = item.slice(0, separatorIndex).trim().toLowerCase();
       url = item.slice(separatorIndex + 2).trim();
     }
 
@@ -195,6 +279,25 @@ function renderItems(items){
 
       img.addEventListener('dragstart', e => e.preventDefault());
 
+      img.onerror = function(){
+        wrap.innerHTML = `
+          <div class="pageLabel">${index + 1} 페이지</div>
+          <div class="notice">
+            이미지를 불러오지 못했습니다.<br>
+            아래 버튼으로 새 창에서 확인해주세요.
+          </div>
+        `;
+
+        const button = document.createElement('a');
+        button.className = 'openButton';
+        button.href = url;
+        button.target = '_blank';
+        button.rel = 'noopener noreferrer';
+        button.textContent = '새 창으로 열기';
+
+        wrap.appendChild(button);
+      };
+
       wrap.appendChild(label);
       wrap.appendChild(img);
       content.appendChild(wrap);
@@ -213,14 +316,26 @@ function renderItems(items){
       title.textContent = `${index + 1}번 첨부파일`;
     }
 
+    const frame = document.createElement('iframe');
+    frame.className = 'previewFrame';
+    frame.src = url;
+    frame.allow = 'fullscreen';
+    frame.loading = 'lazy';
+
+    const notice = document.createElement('div');
+    notice.className = 'notice';
+    notice.textContent = '미리보기가 표시되지 않으면 아래 버튼으로 새 창에서 확인해주세요.';
+
     const button = document.createElement('a');
-    button.className = 'fileButton';
+    button.className = 'openButton';
     button.href = url;
     button.target = '_blank';
     button.rel = 'noopener noreferrer';
-    button.textContent = '파일 보기';
+    button.textContent = '새 창으로 열기';
 
     wrap.appendChild(title);
+    wrap.appendChild(frame);
+    wrap.appendChild(notice);
     wrap.appendChild(button);
     content.appendChild(wrap);
   });
