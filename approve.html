@@ -377,6 +377,12 @@ button:disabled{
   line-height:1.7;
 }
 
+.loadingText{
+  text-align:center;
+  color:rgba(255,255,255,.7);
+  padding:40px 0;
+}
+
 @media(max-width:640px){
   body{
     padding:16px;
@@ -529,20 +535,20 @@ button:disabled{
     <div class="viewerGrid">
       <a
         id="orderButton"
-        class="viewerButton"
+        class="viewerButton disabled"
         target="_blank"
         rel="noopener noreferrer"
       >
-        발주서 보기
+        발주서 없음
       </a>
 
       <a
         id="specButton"
-        class="viewerButton"
+        class="viewerButton disabled"
         target="_blank"
         rel="noopener noreferrer"
       >
-        명세서 보기
+        명세서 없음
       </a>
     </div>
   </div>
@@ -645,8 +651,19 @@ button:disabled{
 <script>
 const ACCESS_PASSWORD = '0723';
 
-/* 새 Make Webhook URL로 교체하세요 */
-const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/rd01hisy4ybfqgqy6m7xq2495oq8brh7';
+/*
+  승인/반려 처리용 Webhook URL
+  기존 승인 결과 처리 시나리오 URL입니다.
+*/
+const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/jjmvn45ltyb1k9tbyyze9iwgk55wvaho';
+
+/*
+  승인 상세 조회용 Webhook URL
+  Make 새 시나리오:
+  Custom Webhook → Data Store Get a record → Webhook Response
+  이 URL로 반드시 교체해야 합니다.
+*/
+const DETAIL_WEBHOOK_URL = 'https://hook.eu1.make.com/여기에_조회용_웹훅_URL';
 
 const params = new URLSearchParams(window.location.search);
 
@@ -654,35 +671,18 @@ function getParam(name, fallback = ''){
   return params.get(name) || fallback;
 }
 
-function safeDecode(value, fallback = '-'){
-  if(!value) return fallback;
-
-  try{
-    return decodeURIComponent(value);
-  }catch(e){
-    return value || fallback;
-  }
-}
-
 const approvalId = getParam('id', '');
-const approvalToken = getParam('token', '');
 
-const siteCode = safeDecode(getParam('siteCode') || getParam('project'), '-');
-const siteAddress = safeDecode(getParam('address'), '-');
-const manager = safeDecode(getParam('manager'), '-');
-const vendorName = safeDecode(getParam('vendor'), '-');
-const amount = safeDecode(getParam('amount'), '-');
-
-const orderViewer = safeDecode(getParam('order'), '');
-const specViewer = safeDecode(getParam('spec'), '');
-
-const expires = safeDecode(getParam('expires'), '');
-
-document.getElementById('siteCode').innerText = siteCode;
-document.getElementById('siteAddress').innerText = siteAddress;
-document.getElementById('manager').innerText = manager;
-document.getElementById('vendorName').innerText = vendorName;
-document.getElementById('amount').innerText = amount;
+let approvalToken = '';
+let siteCode = '-';
+let siteAddress = '-';
+let manager = '-';
+let vendorName = '-';
+let amount = '-';
+let orderViewer = '';
+let specViewer = '';
+let expires = '';
+let dataLoaded = false;
 
 const orderButton = document.getElementById('orderButton');
 const specButton = document.getElementById('specButton');
@@ -691,6 +691,7 @@ function setViewerButton(button, url, emptyText){
   if(url && url !== '#'){
     button.href = url;
     button.classList.remove('disabled');
+    button.innerText = button.id === 'orderButton' ? '발주서 보기' : '명세서 보기';
   }else{
     button.removeAttribute('href');
     button.classList.add('disabled');
@@ -698,8 +699,70 @@ function setViewerButton(button, url, emptyText){
   }
 }
 
-setViewerButton(orderButton, orderViewer, '발주서 없음');
-setViewerButton(specButton, specViewer, '명세서 없음');
+function applyApprovalData(data){
+  approvalToken = data.token || '';
+
+  siteCode = data.siteCode || '-';
+  siteAddress = data.address || '-';
+  manager = data.manager || '-';
+  vendorName = data.vendor || '-';
+  amount = data.amount || '-';
+  orderViewer = data.orderViewerUrl || '';
+  specViewer = data.specViewerUrl || '';
+  expires = data.expires || '';
+
+  document.getElementById('siteCode').innerText = siteCode;
+  document.getElementById('siteAddress').innerText = siteAddress;
+  document.getElementById('manager').innerText = manager;
+  document.getElementById('vendorName').innerText = vendorName;
+  document.getElementById('amount').innerText = amount;
+
+  if(data.status){
+    document.getElementById('status').innerText = data.status;
+  }
+
+  setViewerButton(orderButton, orderViewer, '발주서 없음');
+  setViewerButton(specButton, specViewer, '명세서 없음');
+
+  dataLoaded = true;
+}
+
+async function loadApprovalData(){
+  if(dataLoaded){
+    return;
+  }
+
+  if(!approvalId){
+    alert('승인 ID가 없습니다.');
+    return;
+  }
+
+  try{
+    const response = await fetch(
+      `${DETAIL_WEBHOOK_URL}?id=${encodeURIComponent(approvalId)}`
+    );
+
+    if(!response.ok){
+      throw new Error('Failed to load approval data');
+    }
+
+    const data = await response.json();
+
+    if(data.success === false){
+      throw new Error(data.message || 'Approval data not found');
+    }
+
+    applyApprovalData(data);
+
+    if(checkExpiration()){
+      showExpired();
+    }
+
+  }catch(error){
+    console.error(error);
+    alert('승인 정보를 불러오지 못했습니다. 담당자에게 문의해주세요.');
+  }
+}
 
 function checkExpiration(){
   if(!expires) return false;
@@ -717,9 +780,11 @@ function showExpired(){
   document.getElementById('mainContent').style.display = 'none';
 }
 
-function unlockPage(){
+async function unlockPage(){
   document.getElementById('passwordScreen').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
+
+  await loadApprovalData();
 
   setTimeout(resizeSignatureCanvas, 200);
 }
@@ -743,16 +808,22 @@ document.getElementById('passwordInput').addEventListener('keydown', function(e)
   }
 });
 
-if(checkExpiration()){
-  showExpired();
-}else{
-  const unlocked = sessionStorage.getItem('rvdh_approval_unlocked_' + approvalId);
+window.addEventListener('load', function(){
+  const passwordInput = document.getElementById('passwordInput');
 
-  if(unlocked === 'true'){
-    unlockPage();
-  }else{
-    document.getElementById('mainContent').style.display = 'none';
+  if(passwordInput){
+    setTimeout(function(){
+      passwordInput.focus();
+    }, 300);
   }
+});
+
+const unlocked = sessionStorage.getItem('rvdh_approval_unlocked_' + approvalId);
+
+if(unlocked === 'true'){
+  unlockPage();
+}else{
+  document.getElementById('mainContent').style.display = 'none';
 }
 
 const approvePopup = document.getElementById('confirmPopup');
@@ -902,6 +973,10 @@ async function confirmReject(){
 }
 
 async function sendWebhook(status, rejectReasonText = '', signatureImage = ''){
+  if(!dataLoaded){
+    await loadApprovalData();
+  }
+
   if(checkExpiration()){
     showExpired();
     return;
@@ -955,6 +1030,7 @@ async function sendWebhook(status, rejectReasonText = '', signatureImage = ''){
     );
 
   }catch(error){
+    console.error(error);
     alert('오류가 발생했습니다. 다시 시도해주세요.');
 
     approveBtn.disabled = false;
