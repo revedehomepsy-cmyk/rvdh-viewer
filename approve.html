@@ -8,7 +8,8 @@
 <link rel="icon" type="image/png" href="./favicon.png">
 <link rel="apple-touch-icon" href="./favicon.png">
 
-<style>
+<style
+  
 body{
   margin:0;
   background:#3B2A1D;
@@ -231,7 +232,78 @@ button:disabled{
   margin-top:12px;
   line-height:1.6;
 }
+.choiceGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:12px;
+}
 
+.choiceBox{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  min-height:54px;
+  border-radius:18px;
+  background:#2F2118;
+  border:1px solid rgba(255,255,255,.16);
+  color:white;
+  font-size:15px;
+  cursor:pointer;
+  box-sizing:border-box;
+}
+
+.choiceBox input{
+  accent-color:white;
+}
+
+.conditionalBlock{
+  display:none;
+  margin-top:24px;
+  padding-top:22px;
+  border-top:1px solid rgba(255,255,255,.12);
+}
+
+.smallTitle{
+  font-size:18px;
+  margin-bottom:10px;
+}
+
+.differenceBlock{
+  margin-top:22px;
+}
+
+.moneyInput{
+  width:100%;
+  height:56px;
+  margin-top:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.16);
+  background:#2F2118;
+  color:white;
+  padding:0 16px;
+  box-sizing:border-box;
+  font-size:16px;
+  outline:none;
+}
+
+.moneyInput::placeholder{
+  color:rgba(255,255,255,.38);
+}
+
+.noticeText{
+  color:rgba(255,255,255,.5);
+  font-size:13px;
+  line-height:1.6;
+  margin-top:10px;
+}
+
+@media(max-width:640px){
+  .choiceGrid{
+    grid-template-columns:1fr;
+  }
+}
 .popup{
   position:fixed;
   inset:0;
@@ -665,7 +737,7 @@ button:disabled{
       <div class="label">
         실행계획 대비 실행가 차액은 얼마입니까?
       </div>
-
+    
       <div class="choiceGrid">
         <label class="choiceBox">
           <input type="radio" name="estimateDifferenceType" value="초과">
