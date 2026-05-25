@@ -618,7 +618,32 @@ button:disabled{
   </div>
 
   <div class="card">
-    <div class="uploadCardTitle">
+  <div class="uploadCardTitle">
+    최종 견적서 확인
+  </div>
+
+  <div class="uploadDesc">
+    발주 전 실행 계획 확인을 위한 견적서 보유 여부를 선택해주세요.
+  </div>
+
+  <div class="label">
+    발주전 실행 계획을 위한 견적서가 있습니까?
+  </div>
+
+  <div class="choiceGrid">
+    <label class="choiceBox">
+      <input type="radio" name="hasFinalEstimate" value="yes">
+      <span>있음</span>
+    </label>
+
+    <label class="choiceBox">
+      <input type="radio" name="hasFinalEstimate" value="no">
+      <span>없음</span>
+    </label>
+  </div>
+
+  <div id="finalEstimateBlock" class="conditionalBlock">
+    <div class="uploadCardTitle smallTitle">
       최종 견적서 업로드
     </div>
 
@@ -636,6 +661,36 @@ button:disabled{
       >
     </div>
 
+    <div class="differenceBlock">
+      <div class="label">
+        실행계획 대비 실행가 차액은 얼마입니까?
+      </div>
+
+      <div class="choiceGrid">
+        <label class="choiceBox">
+          <input type="radio" name="estimateDifferenceType" value="초과">
+          <span>초과</span>
+        </label>
+
+        <label class="choiceBox">
+          <input type="radio" name="estimateDifferenceType" value="절감">
+          <span>절감</span>
+        </label>
+      </div>
+
+      <input
+        type="number"
+        id="estimateDifferenceAmount"
+        class="moneyInput"
+        placeholder="차액 금액을 입력해주세요"
+        inputmode="numeric"
+      >
+
+      <div class="noticeText">
+        예: 실행계획보다 300,000원 초과 또는 150,000원 절감
+      </div>
+    </div>
+
     <button class="uploadBtn" id="uploadFinalEstimateBtn">
       최종 견적서 업로드
     </button>
@@ -644,6 +699,7 @@ button:disabled{
       아직 업로드된 최종 견적서가 없습니다.
     </div>
   </div>
+</div>
 
   <div class="card">
     <div class="label">
