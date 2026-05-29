@@ -653,6 +653,11 @@ button:disabled{
       </div>
 
       <div>
+        <div class="label">업체 이메일</div>
+        <div class="value" id="vendorEmail">-</div>
+      </div>
+
+      <div>
         <div class="label">담당자</div>
         <div class="value" id="manager">-</div>
       </div>
@@ -918,7 +923,6 @@ const ACCESS_PASSWORD = '0723';
 
 /*
   승인/반려 처리용 Make Webhook URL
-  실제 승인/반려 Webhook URL로 교체하세요.
 */
 const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/rd01hisy4ybfqgqy6m7xq2495oq8brh7';
 
@@ -957,6 +961,7 @@ let siteCode = safeDecode(getParam('siteCode') || getParam('project'), '-');
 let siteAddress = safeDecode(getParam('address'), '-');
 let manager = safeDecode(getParam('manager'), '-');
 let vendorName = safeDecode(getParam('vendor'), '-');
+let vendorEmail = safeDecode(getParam('vendorEmail'), '-');
 let amount = safeDecode(getParam('amount'), '-');
 
 const orderViewer = safeDecode(getParam('order'), '');
@@ -983,6 +988,7 @@ function applyApprovalData(){
   document.getElementById('siteAddress').innerText = siteAddress;
   document.getElementById('manager').innerText = manager;
   document.getElementById('vendorName').innerText = vendorName;
+  document.getElementById('vendorEmail').innerText = vendorEmail;
   document.getElementById('amount').innerText = amount;
 
   setViewerButton(orderButton, orderViewer, '발주서 없음');
@@ -1276,6 +1282,7 @@ async function confirmReassign(){
         siteCode: siteCode,
         siteAddress: siteAddress,
         vendor: vendorName,
+        vendorEmail: vendorEmail,
         amount: amount,
         currentManager: manager,
         newManager: newManager,
@@ -1345,6 +1352,7 @@ async function uploadFinalEstimate(){
   formData.append('siteCode', siteCode);
   formData.append('siteAddress', siteAddress);
   formData.append('vendor', vendorName);
+  formData.append('vendorEmail', vendorEmail);
   formData.append('manager', manager);
   formData.append('amount', amount);
   formData.append('hasFinalEstimate', hasFinalEstimate);
@@ -1406,6 +1414,7 @@ async function sendWebhook(status, rejectReasonText = '', signatureImage = ''){
         siteAddress: siteAddress,
         manager: manager,
         vendor: vendorName,
+        vendorEmail: vendorEmail,
         amount: amount,
         order: orderViewer,
         spec: specViewer,
