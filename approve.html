@@ -1419,12 +1419,12 @@ async function confirmReassign(){
   confirmButton.disabled = true;
 
   const nextStatus = isSecondStepRecheck
-    ? 'reassigned_back'
-    : 'reassigned';
+  ? 'reassigned_back'
+  : 'reassigned';
 
-  const nextReassignMode = isSecondStepRecheck
-    ? 'request_1st_recheck'
-    : 'manager_reassign';
+const nextReassignMode = isSecondStepRecheck
+  ? 'request_1st_recheck'
+  : 'manager_reassign';
 
   const payload = {
     type:'reassign',
