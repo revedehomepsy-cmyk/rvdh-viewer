@@ -947,7 +947,7 @@ button:disabled{
 <script>
 const ACCESS_PASSWORD = '0723';
 
-const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/rd01hisy4ybfqgqy6m7xq2495oq8brh7';
+const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/jw3fp3v0cbkq624x9skdn19qgedtqi97';
 
 const REASSIGN_WEBHOOK_URL = MAKE_WEBHOOK_URL;
 
@@ -1419,36 +1419,12 @@ async function confirmReassign(){
   confirmButton.disabled = true;
 
   const nextStatus = isSecondStepRecheck
-  ? 'reassigned_back'
-  : 'reassigned';
+    ? 'reassigned_back'
+    : 'reassigned';
 
-const nextReassignMode = isSecondStepRecheck
-  ? 'request_1st_recheck'
-  : 'manager_reassign';
-
-  const payload = {
-    type:'reassign',
-    status: nextStatus,
-    reassignMode: nextReassignMode,
-    id: approvalId,
-    token: approvalToken,
-    notionItemId: notionItemId,
-    approvalStep: isSecondStepRecheck ? '1' : approvalStep,
-    originalApprovalStep: approvalStep,
-    approverRole: isSecondStepRecheck ? 'manager' : approverRole,
-    siteCode: siteCode,
-    siteAddress: siteAddress,
-    vendor: vendorName,
-    vendorEmail: vendorEmail,
-    amount: amount,
-    currentManager: manager,
-    newManager: newManager,
-    firstApprover: firstApprover,
-    reason: reason,
-    order: orderViewer,
-    spec: specViewer,
-    submittedAt: new Date().toISOString()
-  };
+  const nextReassignMode = isSecondStepRecheck
+    ? 'request_1st_recheck'
+    : 'manager_reassign';
 
   try{
     const response = await fetch(REASSIGN_WEBHOOK_URL,{
@@ -1456,14 +1432,36 @@ const nextReassignMode = isSecondStepRecheck
       headers:{
         'Content-Type':'application/json'
       },
-      body:JSON.stringify(payload)
+      body:JSON.stringify({
+        type:'reassign',
+        status: nextStatus,
+        reassignMode: nextReassignMode,
+        id: approvalId,
+        token: approvalToken,
+        notionItemId: notionItemId,
+        approvalStep: isSecondStepRecheck ? '1' : approvalStep,
+        originalApprovalStep: approvalStep,
+        approverRole: isSecondStepRecheck ? 'manager' : approverRole,
+        siteCode: siteCode,
+        siteAddress: siteAddress,
+        vendor: vendorName,
+        vendorEmail: vendorEmail,
+        amount: amount,
+        currentManager: manager,
+        newManager: newManager,
+        firstApprover: firstApprover,
+        reason: reason,
+        order: orderViewer,
+        spec: specViewer,
+        submittedAt: new Date().toISOString()
+      })
     });
 
     const responseText = await response.text();
 
     if(!response.ok){
-      console.error('Reassign webhook failed:', response.status, responseText, payload);
-      throw new Error(`Webhook failed: ${response.status}`);
+      console.error('Reassign webhook failed:', response.status, responseText);
+      throw new Error('Reassign webhook failed');
     }
 
     closeReassignPopup();
