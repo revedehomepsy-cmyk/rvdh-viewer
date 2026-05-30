@@ -1309,7 +1309,11 @@ async function confirmApproval(){
 
   approvePopup.style.display = 'none';
 
-  await sendWebhook('approved', '', signatureImage);
+  const approvalStatus = approvalStep === '2'
+    ? 'approved_2nd'
+    : 'approved_1st';
+
+  await sendWebhook(approvalStatus, '', signatureImage);
 }
 
 async function confirmReject(){
