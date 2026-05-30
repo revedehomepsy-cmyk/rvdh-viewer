@@ -969,6 +969,17 @@ function safeDecode(value, fallback = '-'){
   }
 }
 
+function formatAmount(value){
+  if(!value || value === '-') return '-';
+
+  const numberOnly = String(value).replace(/[^\d.-]/g, '');
+  const number = Number(numberOnly);
+
+  if(isNaN(number)) return value;
+
+  return number.toLocaleString('ko-KR') + '원';
+}  
+  
 const approvalId = getParam('id', '');
 const approvalToken = getParam('token', '');
 const notionItemId = getParam('notionItemId', '');
@@ -1059,7 +1070,7 @@ function applyApprovalData(){
   document.getElementById('manager').innerText = manager;
   document.getElementById('vendorName').innerText = vendorName;
   document.getElementById('vendorEmail').innerText = vendorEmail;
-  document.getElementById('amount').innerText = amount;
+  document.getElementById('amount').innerText = formatAmount(amount);
 
   applyStepUI();
 
