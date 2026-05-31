@@ -1135,59 +1135,55 @@ function showExpired(){
   document.getElementById('mainContent').style.display = 'none';
 }
 
-function lockApprovalPage(message){
-  const approveBtn = document.getElementById('approveBtn');
-  const rejectBtn = document.getElementById('rejectBtn');
-  const reassignBtn = document.getElementById('reassignBtn');
-  const comment = document.getElementById('comment');
-  const uploadBtn = document.getElementById('uploadFinalEstimateBtn');
+function showCompletedPage(message){
+  document.getElementById('passwordScreen').style.display = 'none';
+  document.getElementById('expiredScreen').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'none';
 
-  if(approveBtn) approveBtn.disabled = true;
-  if(rejectBtn) rejectBtn.disabled = true;
-  if(reassignBtn) reassignBtn.disabled = true;
-  if(comment) comment.disabled = true;
-  if(uploadBtn) uploadBtn.disabled = true;
+  const existingCompletedScreen = document.getElementById('completedScreen');
 
-  const status = document.getElementById('status');
-
-  if(status){
-    status.innerText = message || '처리 완료';
+  if(existingCompletedScreen){
+    existingCompletedScreen.remove();
   }
-}
 
-function finishAndClosePage(message){
-  lockApprovalPage(message || '처리가 완료되었습니다.');
+  const completedScreen = document.createElement('div');
+  completedScreen.id = 'completedScreen';
 
-  const closeMessage = document.createElement('div');
+  completedScreen.style.position = 'fixed';
+  completedScreen.style.inset = '0';
+  completedScreen.style.background = '#3B2A1D';
+  completedScreen.style.color = 'white';
+  completedScreen.style.display = 'flex';
+  completedScreen.style.alignItems = 'center';
+  completedScreen.style.justifyContent = 'center';
+  completedScreen.style.textAlign = 'center';
+  completedScreen.style.padding = '24px';
+  completedScreen.style.zIndex = '20000';
 
-  closeMessage.style.position = 'fixed';
-  closeMessage.style.inset = '0';
-  closeMessage.style.background = '#3B2A1D';
-  closeMessage.style.color = 'white';
-  closeMessage.style.display = 'flex';
-  closeMessage.style.alignItems = 'center';
-  closeMessage.style.justifyContent = 'center';
-  closeMessage.style.textAlign = 'center';
-  closeMessage.style.padding = '24px';
-  closeMessage.style.zIndex = '20000';
-
-  closeMessage.innerHTML = `
+  completedScreen.innerHTML = `
     <div style="max-width:420px;">
       <img src="./logo_white.svg" style="max-width:190px; margin-bottom:28px;" alt="RVDH Logo">
 
       <div style="font-size:24px; font-weight:700; margin-bottom:14px;">
-        처리가 완료되었습니다
+        작업이 완료되었습니다
       </div>
 
       <div style="color:rgba(255,255,255,.68); line-height:1.7;">
-        ${message || '요청 처리가 정상적으로 완료되었습니다.'}<br>
-        잠시 후 창이 자동으로 닫힙니다.<br><br>
-        창이 닫히지 않으면 이 창을 직접 닫아주세요.
+        ${message || '이미 처리된 승인 건입니다.'}<br>
+        이 창은 더 이상 승인, 반려, 재할당을 진행할 수 없습니다.
       </div>
     </div>
   `;
 
-  document.body.appendChild(closeMessage);
+  document.body.appendChild(completedScreen);
+}
+
+function lockApprovalPage(message){
+  showCompletedPage(message || '이미 처리된 승인 건입니다.');
+}
+
+function finishAndClosePage(message){
+  showCompletedPage(message || '처리가 완료되었습니다.');
 
   setTimeout(function(){
     window.close();
