@@ -1175,18 +1175,28 @@ function finishAndClosePage(message){
 
 async function checkCurrentApprovalStatus(){
   if(!STATUS_CHECK_WEBHOOK_URL || !approvalId){
-    console.log('상태조회 생략: URL 또는 approvalId 없음');
+    console.log('상태조회 생략: URL 또는 approvalId 없음', {
+      STATUS_CHECK_WEBHOOK_URL,
+      approvalId
+    });
     return;
   }
 
   try{
-    const checkUrl =
-      `${STATUS_CHECK_WEBHOOK_URL}?id=${encodeURIComponent(approvalId)}&approvalStep=${encodeURIComponent(approvalStep)}`;
+    console.log('상태조회 요청 시작:', {
+      id: approvalId,
+      approvalStep: approvalStep
+    });
 
-    console.log('상태조회 요청 URL:', checkUrl);
-
-    const response = await fetch(checkUrl, {
-      method: 'GET'
+    const response = await fetch(STATUS_CHECK_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        id: approvalId,
+        approvalStep: approvalStep
+      })
     });
 
     if(!response.ok){
