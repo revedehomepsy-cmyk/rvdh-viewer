@@ -665,6 +665,11 @@ button:disabled{
         <div class="value" id="manager">-</div>
       </div>
 
+      <div id="firstApproverInfoBox" style="display:none;">
+        <div class="label">1차 승인 담당자</div>
+        <div class="value" id="firstApproverName">-</div>
+      </div>
+      
       <div>
         <div class="label">승인 단계</div>
         <div class="value" id="approvalStepText">-</div>
@@ -1072,6 +1077,17 @@ function applyApprovalData(){
   document.getElementById('vendorEmail').innerText = vendorEmail;
   document.getElementById('amount').innerText = formatAmount(amount);
 
+const firstApproverInfoBox = document.getElementById('firstApproverInfoBox');
+const firstApproverName = document.getElementById('firstApproverName');
+
+if(approvalStep === '2' && firstApprover && firstApprover !== '-'){
+  firstApproverInfoBox.style.display = 'block';
+  firstApproverName.innerText = firstApprover;
+}else{
+  firstApproverInfoBox.style.display = 'none';
+  firstApproverName.innerText = '-';
+}
+  
   applyStepUI();
 
   setViewerButton(orderButton, orderViewer, '발주서 없음');
@@ -1214,25 +1230,27 @@ document.getElementById('reassignBtn').addEventListener('click', function(){
   reassignError.style.display = 'none';
 
   if(approvalStep === '2'){
-    document.getElementById('reassignPopupTitle').innerText = '1차 승인자 재확인 요청';
-    document.getElementById('reassignPopupDesc').innerHTML =
-      '2차 승인 중 1차 승인자의 재확인이 필요한 경우 사용합니다.<br>아래에 1차 승인자 이름을 정확히 입력해주세요.';
+  document.getElementById('reassignPopupTitle').innerText = '1차 승인자 재확인 요청';
+  document.getElementById('reassignPopupDesc').innerHTML =
+    '2차 승인 중 1차 승인자의 재확인이 필요한 경우 사용합니다.<br>아래 재확인 요청 대상은 1차 승인 담당자 기준으로 자동 입력됩니다.';
 
-    document.getElementById('newManagerLabel').innerText = '재확인 요청 대상';
+  document.getElementById('newManagerLabel').innerText = '재확인 요청 대상';
 
-    if(firstApprover && firstApprover !== '-'){
-      newManagerInput.value = firstApprover;
-    }
-
-    document.querySelector('.confirmReassignBtn').innerText = '재확인 요청';
+  if(firstApprover && firstApprover !== '-'){
+    newManagerInput.value = firstApprover;
   }else{
-    document.getElementById('reassignPopupTitle').innerText = '담당자 재할당';
-    document.getElementById('reassignPopupDesc').innerHTML =
-      '담당자가 잘못 지정된 경우, 아래에 새 담당자 이름을 정확히 입력해주세요.<br>입력한 이름을 기준으로 Teams 알림이 발송됩니다.';
-
-    document.getElementById('newManagerLabel').innerText = '새 담당자 이름';
-    document.querySelector('.confirmReassignBtn').innerText = '재할당 확정';
+    newManagerInput.value = '';
   }
+
+  document.querySelector('.confirmReassignBtn').innerText = '재확인 요청';
+}else{
+  document.getElementById('reassignPopupTitle').innerText = '담당자 재할당';
+  document.getElementById('reassignPopupDesc').innerHTML =
+    '담당자가 잘못 지정된 경우, 아래에 새 담당자 이름을 정확히 입력해주세요.<br>입력한 이름을 기준으로 Teams 알림이 발송됩니다.';
+
+  document.getElementById('newManagerLabel').innerText = '새 담당자 이름';
+  document.querySelector('.confirmReassignBtn').innerText = '재할당 확정';
+}
 
   reassignPopup.style.display = 'flex';
 });
