@@ -1224,9 +1224,9 @@ async function checkCurrentApprovalStatus(){
 
     if(approvalStep === '1'){
       const allowedStatuses = [
-        '담당자 검토중',
+        '검토중',
         '재할당',
-        '1차 재확인 요청'
+        '재검토'
       ];
 
       if(!allowedStatuses.includes(currentStatus)){
@@ -1236,7 +1236,7 @@ async function checkCurrentApprovalStatus(){
 
     if(approvalStep === '2'){
       const allowedStatuses = [
-        '2차 승인 대기'
+        '1차 승인'
       ];
 
       if(!allowedStatuses.includes(currentStatus)){
