@@ -957,7 +957,7 @@ const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/jw3fp3v0cbkq624x9skdn19qgedt
 const REASSIGN_WEBHOOK_URL = MAKE_WEBHOOK_URL;
 
 const STATUS_CHECK_WEBHOOK_URL = 'https://hook.eu1.make.com/50sf7iit995gnnjyob0qs1etu5phdr77';
-  
+
 const FINAL_ESTIMATE_UPLOAD_WEBHOOK_URL = 'https://hook.eu1.make.com/최종견적서업로드_WEBHOOK_URL';
 
 const params = new URLSearchParams(window.location.search);
@@ -985,8 +985,8 @@ function formatAmount(value){
   if(isNaN(number)) return value;
 
   return number.toLocaleString('ko-KR') + '원';
-}  
-  
+}
+
 const approvalId = getParam('id', '');
 const approvalToken = getParam('token', '');
 const notionItemId = getParam('notionItemId', '');
@@ -1079,17 +1079,19 @@ function applyApprovalData(){
   document.getElementById('vendorEmail').innerText = vendorEmail;
   document.getElementById('amount').innerText = formatAmount(amount);
 
-const firstApproverInfoBox = document.getElementById('firstApproverInfoBox');
-const firstApproverName = document.getElementById('firstApproverName');
+  const firstApproverInfoBox = document.getElementById('firstApproverInfoBox');
+  const firstApproverName = document.getElementById('firstApproverName');
 
-if(approvalStep === '2' && firstApprover && firstApprover !== '-'){
-  firstApproverInfoBox.style.display = 'block';
-  firstApproverName.innerText = firstApprover;
-}else{
-  firstApproverInfoBox.style.display = 'none';
-  firstApproverName.innerText = '-';
-}
-  
+  if(firstApproverInfoBox && firstApproverName){
+    if(approvalStep === '2' && firstApprover && firstApprover !== '-'){
+      firstApproverInfoBox.style.display = 'block';
+      firstApproverName.innerText = firstApprover;
+    }else{
+      firstApproverInfoBox.style.display = 'none';
+      firstApproverName.innerText = '-';
+    }
+  }
+
   applyStepUI();
 
   setViewerButton(orderButton, orderViewer, '발주서 없음');
@@ -1112,6 +1114,151 @@ function showExpired(){
   document.getElementById('mainContent').style.display = 'none';
 }
 
+function lockApprovalPage(message){
+  const approveBtn = document.getElementById('approveBtn');
+  const rejectBtn = document.getElementById('rejectBtn');
+  const reassignBtn = document.getElementById('reassignBtn');
+  const comment = document.getElementById('comment');
+  const uploadBtn = document.getElementById('uploadFinalEstimateBtn');
+
+  if(approveBtn) approveBtn.disabled = true;
+  if(rejectBtn) rejectBtn.disabled = true;
+  if(reassignBtn) reassignBtn.disabled = true;
+  if(comment) comment.disabled = true;
+  if(uploadBtn) uploadBtn.disabled = true;
+
+  const status = document.getElementById('status');
+
+  if(status){
+    status.innerText = message || '처리 완료';
+  }
+}
+
+function finishAndClosePage(message){
+  lockApprovalPage(message || '처리가 완료되었습니다.');
+
+  const closeMessage = document.createElement('div');
+
+  closeMessage.style.position = 'fixed';
+  closeMessage.style.inset = '0';
+  closeMessage.style.background = '#3B2A1D';
+  closeMessage.style.color = 'white';
+  closeMessage.style.display = 'flex';
+  closeMessage.style.alignItems = 'center';
+  closeMessage.style.justifyContent = 'center';
+  closeMessage.style.textAlign = 'center';
+  closeMessage.style.padding = '24px';
+  closeMessage.style.zIndex = '20000';
+
+  closeMessage.innerHTML = `
+    <div style="max-width:420px;">
+      <img src="./logo_white.svg" style="max-width:190px; margin-bottom:28px;" alt="RVDH Logo">
+
+      <div style="font-size:24px; font-weight:700; margin-bottom:14px;">
+        처리가 완료되었습니다
+      </div>
+
+      <div style="color:rgba(255,255,255,.68); line-height:1.7;">
+        ${message || '요청 처리가 정상적으로 완료되었습니다.'}<br>
+        잠시 후 창이 자동으로 닫힙니다.<br><br>
+        창이 닫히지 않으면 이 창을 직접 닫아주세요.
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(closeMessage);
+
+  setTimeout(function(){
+    window.close();
+  }, 2500);
+}
+
+async function checkCurrentApprovalStatus(){
+  if(!STATUS_CHECK_WEBHOOK_URL || !approvalId){
+    console.log('상태조회 생략: URL 또는 approvalId 없음');
+    return;
+  }
+
+  try{
+    const checkUrl =
+      `${STATUS_CHECK_WEBHOOK_URL}?id=${encodeURIComponent(approvalId)}&approvalStep=${encodeURIComponent(approvalStep)}`;
+
+    console.log('상태조회 요청 URL:', checkUrl);
+
+    const response = await fetch(checkUrl, {
+      method: 'GET'
+    });
+
+    if(!response.ok){
+      console.error('Status check failed:', response.status);
+      return;
+    }
+
+    let data = {};
+
+    try{
+      data = await response.json();
+    }catch(jsonError){
+      console.error('상태조회 응답 JSON 파싱 실패:', jsonError);
+      return;
+    }
+
+    console.log('상태조회 응답:', data);
+
+    const currentStatus = data.currentStatus || '';
+
+    if(!currentStatus){
+      console.log('현재 상태값 없음');
+      return;
+    }
+
+    if(approvalStep === '1'){
+      const allowedStatuses = [
+        '담당자 검토중',
+        '재할당',
+        '1차 재확인 요청'
+      ];
+
+      if(!allowedStatuses.includes(currentStatus)){
+        lockApprovalPage('이미 처리된 승인 건입니다.');
+      }
+    }
+
+    if(approvalStep === '2'){
+      const allowedStatuses = [
+        '2차 승인 대기'
+      ];
+
+      if(!allowedStatuses.includes(currentStatus)){
+        lockApprovalPage('이미 처리된 승인 건입니다.');
+      }
+    }
+
+  }catch(error){
+    console.error('Approval status check error:', error);
+  }
+}
+
+async function unlockPage(){
+  document.getElementById('passwordScreen').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+
+  try{
+    applyApprovalData();
+  }catch(error){
+    console.error('applyApprovalData error:', error);
+  }
+
+  if(checkExpiration()){
+    showExpired();
+    return;
+  }
+
+  try{
+    await checkCurrentApprovalStatus();
+  }catch(error){
+    console.error('checkCurrentApprovalStatus error:', error);
+  }
 
   setTimeout(resizeSignatureCanvas, 200);
 }
@@ -1222,27 +1369,27 @@ document.getElementById('reassignBtn').addEventListener('click', function(){
   reassignError.style.display = 'none';
 
   if(approvalStep === '2'){
-  document.getElementById('reassignPopupTitle').innerText = '1차 승인자 재확인 요청';
-  document.getElementById('reassignPopupDesc').innerHTML =
-    '2차 승인 중 1차 승인자의 재확인이 필요한 경우 사용합니다.<br>아래 재확인 요청 대상은 1차 승인 담당자 기준으로 자동 입력됩니다.';
+    document.getElementById('reassignPopupTitle').innerText = '1차 승인자 재확인 요청';
+    document.getElementById('reassignPopupDesc').innerHTML =
+      '2차 승인 중 1차 승인자의 재확인이 필요한 경우 사용합니다.<br>아래 재확인 요청 대상은 1차 승인 담당자 기준으로 자동 입력됩니다.';
 
-  document.getElementById('newManagerLabel').innerText = '재확인 요청 대상';
+    document.getElementById('newManagerLabel').innerText = '재확인 요청 대상';
 
-  if(firstApprover && firstApprover !== '-'){
-    newManagerInput.value = firstApprover;
+    if(firstApprover && firstApprover !== '-'){
+      newManagerInput.value = firstApprover;
+    }else{
+      newManagerInput.value = '';
+    }
+
+    document.querySelector('.confirmReassignBtn').innerText = '재확인 요청';
   }else{
-    newManagerInput.value = '';
+    document.getElementById('reassignPopupTitle').innerText = '담당자 재할당';
+    document.getElementById('reassignPopupDesc').innerHTML =
+      '담당자가 잘못 지정된 경우, 아래에 새 담당자 이름을 정확히 입력해주세요.<br>입력한 이름을 기준으로 Teams 알림이 발송됩니다.';
+
+    document.getElementById('newManagerLabel').innerText = '새 담당자 이름';
+    document.querySelector('.confirmReassignBtn').innerText = '재할당 확정';
   }
-
-  document.querySelector('.confirmReassignBtn').innerText = '재확인 요청';
-}else{
-  document.getElementById('reassignPopupTitle').innerText = '담당자 재할당';
-  document.getElementById('reassignPopupDesc').innerHTML =
-    '담당자가 잘못 지정된 경우, 아래에 새 담당자 이름을 정확히 입력해주세요.<br>입력한 이름을 기준으로 Teams 알림이 발송됩니다.';
-
-  document.getElementById('newManagerLabel').innerText = '새 담당자 이름';
-  document.querySelector('.confirmReassignBtn').innerText = '재할당 확정';
-}
 
   reassignPopup.style.display = 'flex';
 });
@@ -1477,14 +1624,14 @@ async function confirmReassign(){
     closeReassignPopup();
 
     if(isSecondStepRecheck){
-  document.getElementById('status').innerText = '1차 재확인 요청';
-  finishAndClosePage('1차 승인자 재확인 요청이 완료되었습니다.');
-}else{
-  manager = newManager;
-  document.getElementById('status').innerText = '재할당';
-  document.getElementById('manager').innerText = newManager;
-  finishAndClosePage('재할당 요청이 완료되었습니다.');
-}
+      document.getElementById('status').innerText = '1차 재확인 요청';
+      finishAndClosePage('1차 승인자 재확인 요청이 완료되었습니다.');
+    }else{
+      manager = newManager;
+      document.getElementById('status').innerText = '재할당';
+      document.getElementById('manager').innerText = newManager;
+      finishAndClosePage('재할당 요청이 완료되었습니다.');
+    }
 
   }catch(error){
     console.error(error);
@@ -1572,169 +1719,6 @@ async function uploadFinalEstimate(){
   }
 }
 
-function lockApprovalPage(message){
-  const approveBtn = document.getElementById('approveBtn');
-  const rejectBtn = document.getElementById('rejectBtn');
-  const reassignBtn = document.getElementById('reassignBtn');
-  const comment = document.getElementById('comment');
-  const uploadBtn = document.getElementById('uploadFinalEstimateBtn');
-
-  if(approveBtn) approveBtn.disabled = true;
-  if(rejectBtn) rejectBtn.disabled = true;
-  if(reassignBtn) reassignBtn.disabled = true;
-  if(comment) comment.disabled = true;
-  if(uploadBtn) uploadBtn.disabled = true;
-
-  const status = document.getElementById('status');
-
-  if(status){
-    status.innerText = message || '처리 완료';
-  }
-}
-  
-function finishAndClosePage(message){
-  lockApprovalPage(message || '처리가 완료되었습니다.');
-
-  const closeMessage = document.createElement('div');
-
-  closeMessage.style.position = 'fixed';
-  closeMessage.style.inset = '0';
-  closeMessage.style.background = '#3B2A1D';
-  closeMessage.style.color = 'white';
-  closeMessage.style.display = 'flex';
-  closeMessage.style.alignItems = 'center';
-  closeMessage.style.justifyContent = 'center';
-  closeMessage.style.textAlign = 'center';
-  closeMessage.style.padding = '24px';
-  closeMessage.style.zIndex = '20000';
-
-  closeMessage.innerHTML = `
-    <div style="max-width:420px;">
-      <img src="./logo_white.svg" style="max-width:190px; margin-bottom:28px;" alt="RVDH Logo">
-
-      <div style="font-size:24px; font-weight:700; margin-bottom:14px;">
-        처리가 완료되었습니다
-      </div>
-
-      <div style="color:rgba(255,255,255,.68); line-height:1.7;">
-        ${message || '요청 처리가 정상적으로 완료되었습니다.'}<br>
-        잠시 후 창이 자동으로 닫힙니다.<br><br>
-        창이 닫히지 않으면 이 창을 직접 닫아주세요.
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(closeMessage);
-
-  setTimeout(function(){
-    window.close();
-  }, 2500);
-}
-
-async function checkCurrentApprovalStatus(){
-
-  if(!STATUS_CHECK_WEBHOOK_URL || !approvalId){
-
-    console.log('상태조회 생략: URL 또는 approvalId 없음');
-
-    return;
-
-  }
-
-  try{
-
-    const checkUrl =
-
-      `${STATUS_CHECK_WEBHOOK_URL}?id=${encodeURIComponent(approvalId)}&approvalStep=${encodeURIComponent(approvalStep)}`;
-
-    console.log('상태조회 요청 URL:', checkUrl);
-
-    const response = await fetch(checkUrl, {
-
-      method: 'GET'
-
-    });
-
-    if(!response.ok){
-
-      console.error('Status check failed:', response.status);
-
-      return;
-
-    }
-
-    const data = await response.json();
-
-    console.log('상태조회 응답:', data);
-
-    const currentStatus = data.currentStatus || '';
-
-    if(approvalStep === '1'){
-
-      const allowedStatuses = [
-
-        '담당자 검토중',
-
-        '재할당',
-
-        '1차 재확인 요청'
-
-      ];
-
-      if(!allowedStatuses.includes(currentStatus)){
-
-        lockApprovalPage('이미 처리된 승인 건입니다.');
-
-      }
-
-    }
-
-    if(approvalStep === '2'){
-
-      const allowedStatuses = [
-
-        '2차 승인 대기'
-
-      ];
-
-      if(!allowedStatuses.includes(currentStatus)){
-
-        lockApprovalPage('이미 처리된 승인 건입니다.');
-
-      }
-
-    }
-
-  }catch(error){
-
-    console.error('Approval status check error:', error);
-
-  }
-
-}
-
-async function unlockPage(){
-
-  document.getElementById('passwordScreen').style.display = 'none';
-
-  document.getElementById('mainContent').style.display = 'block';
-
-  applyApprovalData();
-
-  if(checkExpiration()){
-
-    showExpired();
-
-    return;
-
-  }
-
-  await checkCurrentApprovalStatus();
-
-  setTimeout(resizeSignatureCanvas, 200);
-
-}
-  
 async function sendWebhook(status, rejectReasonText = '', signatureImage = '', rejectProcessor = ''){
   if(checkExpiration()){
     showExpired();
@@ -1743,9 +1727,11 @@ async function sendWebhook(status, rejectReasonText = '', signatureImage = '', r
 
   const approveBtn = document.getElementById('approveBtn');
   const rejectBtn = document.getElementById('rejectBtn');
+  const reassignBtn = document.getElementById('reassignBtn');
 
   approveBtn.disabled = true;
   rejectBtn.disabled = true;
+  if(reassignBtn) reassignBtn.disabled = true;
 
   try{
     const response = await fetch(MAKE_WEBHOOK_URL,{
@@ -1780,7 +1766,10 @@ async function sendWebhook(status, rejectReasonText = '', signatureImage = '', r
       })
     });
 
+    const responseText = await response.text();
+
     if(!response.ok){
+      console.error('Webhook failed:', response.status, responseText);
       throw new Error('Webhook failed');
     }
 
@@ -1793,24 +1782,23 @@ async function sendWebhook(status, rejectReasonText = '', signatureImage = '', r
     }
 
     const completeMessage =
-  status === 'approved_2nd'
-    ? '2차 승인이 완료되었습니다.'
-    : status === 'approved_1st'
-      ? '1차 승인이 완료되었습니다.'
-      : '반려 처리가 완료되었습니다.';
+      status === 'approved_2nd'
+        ? '2차 승인이 완료되었습니다.'
+        : status === 'approved_1st'
+          ? '1차 승인이 완료되었습니다.'
+          : '반려 처리가 완료되었습니다.';
 
-finishAndClosePage(completeMessage);
+    finishAndClosePage(completeMessage);
 
   }catch(error){
-  console.error(error);
-  alert('오류가 발생했습니다. 다시 시도해주세요.');
+    console.error(error);
+    alert('오류가 발생했습니다. 다시 시도해주세요.');
 
-  approveBtn.disabled = false;
-  rejectBtn.disabled = false;
+    approveBtn.disabled = false;
+    rejectBtn.disabled = false;
 
-  const reassignBtn = document.getElementById('reassignBtn');
-  if(reassignBtn) reassignBtn.disabled = false;
-}
+    if(reassignBtn) reassignBtn.disabled = false;
+  }
 }
 </script>
 
