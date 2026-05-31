@@ -1580,6 +1580,45 @@ async function uploadFinalEstimate(){
   }
 }
 
+function finishAndClosePage(message){
+  lockApprovalPage(message || '처리가 완료되었습니다.');
+
+  const closeMessage = document.createElement('div');
+
+  closeMessage.style.position = 'fixed';
+  closeMessage.style.inset = '0';
+  closeMessage.style.background = '#3B2A1D';
+  closeMessage.style.color = 'white';
+  closeMessage.style.display = 'flex';
+  closeMessage.style.alignItems = 'center';
+  closeMessage.style.justifyContent = 'center';
+  closeMessage.style.textAlign = 'center';
+  closeMessage.style.padding = '24px';
+  closeMessage.style.zIndex = '20000';
+
+  closeMessage.innerHTML = `
+    <div style="max-width:420px;">
+      <img src="./logo_white.svg" style="max-width:190px; margin-bottom:28px;" alt="RVDH Logo">
+
+      <div style="font-size:24px; font-weight:700; margin-bottom:14px;">
+        처리가 완료되었습니다
+      </div>
+
+      <div style="color:rgba(255,255,255,.68); line-height:1.7;">
+        ${message || '요청 처리가 정상적으로 완료되었습니다.'}<br>
+        잠시 후 창이 자동으로 닫힙니다.<br><br>
+        창이 닫히지 않으면 이 창을 직접 닫아주세요.
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(closeMessage);
+
+  setTimeout(function(){
+    window.close();
+  }, 2500);
+}
+  
 async function sendWebhook(status, rejectReasonText = '', signatureImage = '', rejectProcessor = ''){
   if(checkExpiration()){
     showExpired();
