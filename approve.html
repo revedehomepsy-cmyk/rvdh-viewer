@@ -826,26 +826,28 @@ button:disabled{
       승인 완료 후에는 수정이 불가능합니다.<br><br>
       발주서와 명세서 내용을 다시 한번 확인한 뒤, 아래 서명란에 서명해주세요.
     </div>
+
     <div id="siteCodeConfirmBlock" style="display:none; margin-top:18px;">
-  <div class="label">현장코드 확인</div>
+      <div class="label">현장코드 확인</div>
 
-  <input
-  id="siteCodeConfirmInput"
-  class="textInput"
-  type="text"
-  inputmode="numeric"
-  pattern="[0-9]*"
-  placeholder="숫자만 입력해주세요."
->
+      <input
+        id="siteCodeConfirmInput"
+        class="textInput"
+        type="text"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        placeholder="숫자만 입력해주세요."
+      >
 
-  <div class="noticeText">
-    * 1차 승인 시 현장코드 입력은 필수입니다. 입력한 현장코드는 Notion에 반영됩니다.
-  </div>
+      <div class="noticeText">
+        * 1차 승인 시 현장코드 입력은 필수입니다. 입력한 현장코드는 Notion에 반영됩니다.
+      </div>
 
-  <div class="errorText" id="siteCodeConfirmError">
-    현장코드를 입력해주세요.
-  </div>
-</div>
+      <div class="errorText" id="siteCodeConfirmError">
+        현장코드를 입력해주세요.
+      </div>
+    </div>
+
     <div class="signatureBox">
       <div class="signatureLabel">
         승인 서명
@@ -1202,11 +1204,6 @@ async function checkCurrentApprovalStatus(){
   }
 
   try{
-    console.log('상태조회 요청 시작:', {
-      id: approvalId,
-      approvalStep: approvalStep
-    });
-
     const response = await fetch(STATUS_CHECK_WEBHOOK_URL, {
       method: 'POST',
       headers: {
@@ -1231,8 +1228,6 @@ async function checkCurrentApprovalStatus(){
       console.error('상태조회 응답 JSON 파싱 실패:', jsonError);
       return;
     }
-
-    console.log('상태조회 응답:', data);
 
     const currentStatus = data.currentStatus || '';
 
@@ -1375,16 +1370,26 @@ document.getElementById('approveBtn').addEventListener('click', function(){
     siteCodeConfirmError.style.display = 'none';
   }
 
-  if(approvalStep === '1'){
-    siteCodeConfirmBlock.style.display = 'block';
-    siteCodeConfirmInput.value = siteCode && siteCode !== '-' ? siteCode : '';
-  }else{
-    siteCodeConfirmBlock.style.display = 'none';
-    siteCodeConfirmInput.value = '';
+  if(siteCodeConfirmBlock && siteCodeConfirmInput){
+    if(approvalStep === '1'){
+      siteCodeConfirmBlock.style.display = 'block';
+      siteCodeConfirmInput.value = siteCode && siteCode !== '-' ? String(siteCode).replace(/[^0-9]/g, '') : '';
+    }else{
+      siteCodeConfirmBlock.style.display = 'none';
+      siteCodeConfirmInput.value = '';
+    }
   }
 
   setTimeout(resizeSignatureCanvas, 100);
 });
+
+const siteCodeConfirmInputEl = document.getElementById('siteCodeConfirmInput');
+
+if(siteCodeConfirmInputEl){
+  siteCodeConfirmInputEl.addEventListener('input', function(){
+    this.value = this.value.replace(/[^0-9]/g, '');
+  });
+}
 
 document.getElementById('rejectBtn').addEventListener('click', function(){
   document.getElementById('rejectReason').value = '';
@@ -1561,29 +1566,31 @@ async function confirmApproval(){
   let confirmedSiteCode = siteCode;
 
   if(approvalStep === '1'){
-  const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
-  const siteCodeConfirmError = document.getElementById('siteCodeConfirmError');
+    const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
+    const siteCodeConfirmError = document.getElementById('siteCodeConfirmError');
 
-  confirmedSiteCode = siteCodeConfirmInput.value.trim();
+    if(siteCodeConfirmInput){
+      confirmedSiteCode = siteCodeConfirmInput.value.trim();
 
-  if(!confirmedSiteCode){
-    siteCodeConfirmError.innerText = '현장코드를 입력해주세요.';
-    siteCodeConfirmError.style.display = 'block';
-    return;
-  }
+      if(!confirmedSiteCode){
+        if(siteCodeConfirmError){
+          siteCodeConfirmError.innerText = '현장코드를 입력해주세요.';
+          siteCodeConfirmError.style.display = 'block';
+        }
+        return;
+      }
 
-  if(!/^[0-9]+$/.test(confirmedSiteCode)){
-    siteCodeConfirmError.innerText = '현장코드는 숫자만 입력할 수 있습니다.';
-    siteCodeConfirmError.style.display = 'block';
-    return;
-  }
+      if(!/^[0-9]+$/.test(confirmedSiteCode)){
+        if(siteCodeConfirmError){
+          siteCodeConfirmError.innerText = '현장코드는 숫자만 입력할 수 있습니다.';
+          siteCodeConfirmError.style.display = 'block';
+        }
+        return;
+      }
 
-  siteCode = confirmedSiteCode;
-  document.getElementById('siteCode').innerText = confirmedSiteCode;
-}
-
-    siteCode = confirmedSiteCode;
-    document.getElementById('siteCode').innerText = confirmedSiteCode;
+      siteCode = confirmedSiteCode;
+      document.getElementById('siteCode').innerText = confirmedSiteCode;
+    }
   }
 
   const signatureImage = signatureCanvas.toDataURL('image/png');
@@ -1793,6 +1800,7 @@ async function uploadFinalEstimate(){
 }
 
 async function sendWebhook(status, rejectReasonText = '', signatureImage = '', rejectProcessor = '', siteCodeConfirmed = ''){
+  if(checkExpiration()){
     showExpired();
     return;
   }
