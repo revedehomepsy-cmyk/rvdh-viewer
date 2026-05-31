@@ -1112,16 +1112,6 @@ function showExpired(){
   document.getElementById('mainContent').style.display = 'none';
 }
 
-function unlockPage(){
-  document.getElementById('passwordScreen').style.display = 'none';
-  document.getElementById('mainContent').style.display = 'block';
-
-  applyApprovalData();
-
-  if(checkExpiration()){
-    showExpired();
-    return;
-  }
 
   setTimeout(resizeSignatureCanvas, 200);
 }
@@ -1639,6 +1629,110 @@ function finishAndClosePage(message){
   setTimeout(function(){
     window.close();
   }, 2500);
+}
+
+async function checkCurrentApprovalStatus(){
+
+  if(!STATUS_CHECK_WEBHOOK_URL || !approvalId){
+
+    console.log('상태조회 생략: URL 또는 approvalId 없음');
+
+    return;
+
+  }
+
+  try{
+
+    const checkUrl =
+
+      `${STATUS_CHECK_WEBHOOK_URL}?id=${encodeURIComponent(approvalId)}&approvalStep=${encodeURIComponent(approvalStep)}`;
+
+    console.log('상태조회 요청 URL:', checkUrl);
+
+    const response = await fetch(checkUrl, {
+
+      method: 'GET'
+
+    });
+
+    if(!response.ok){
+
+      console.error('Status check failed:', response.status);
+
+      return;
+
+    }
+
+    const data = await response.json();
+
+    console.log('상태조회 응답:', data);
+
+    const currentStatus = data.currentStatus || '';
+
+    if(approvalStep === '1'){
+
+      const allowedStatuses = [
+
+        '담당자 검토중',
+
+        '재할당',
+
+        '1차 재확인 요청'
+
+      ];
+
+      if(!allowedStatuses.includes(currentStatus)){
+
+        lockApprovalPage('이미 처리된 승인 건입니다.');
+
+      }
+
+    }
+
+    if(approvalStep === '2'){
+
+      const allowedStatuses = [
+
+        '2차 승인 대기'
+
+      ];
+
+      if(!allowedStatuses.includes(currentStatus)){
+
+        lockApprovalPage('이미 처리된 승인 건입니다.');
+
+      }
+
+    }
+
+  }catch(error){
+
+    console.error('Approval status check error:', error);
+
+  }
+
+}
+
+async function unlockPage(){
+
+  document.getElementById('passwordScreen').style.display = 'none';
+
+  document.getElementById('mainContent').style.display = 'block';
+
+  applyApprovalData();
+
+  if(checkExpiration()){
+
+    showExpired();
+
+    return;
+
+  }
+
+  await checkCurrentApprovalStatus();
+
+  setTimeout(resizeSignatureCanvas, 200);
+
 }
   
 async function sendWebhook(status, rejectReasonText = '', signatureImage = '', rejectProcessor = ''){
