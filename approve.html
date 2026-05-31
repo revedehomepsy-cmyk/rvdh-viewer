@@ -826,7 +826,26 @@ button:disabled{
       승인 완료 후에는 수정이 불가능합니다.<br><br>
       발주서와 명세서 내용을 다시 한번 확인한 뒤, 아래 서명란에 서명해주세요.
     </div>
+    <div id="siteCodeConfirmBlock" style="display:none; margin-top:18px;">
+  <div class="label">현장코드 확인</div>
 
+  <input
+  id="siteCodeConfirmInput"
+  class="textInput"
+  type="text"
+  inputmode="numeric"
+  pattern="[0-9]*"
+  placeholder="숫자만 입력해주세요."
+>
+
+  <div class="noticeText">
+    * 1차 승인 시 현장코드 입력은 필수입니다. 입력한 현장코드는 Notion에 반영됩니다.
+  </div>
+
+  <div class="errorText" id="siteCodeConfirmError">
+    현장코드를 입력해주세요.
+  </div>
+</div>
     <div class="signatureBox">
       <div class="signatureLabel">
         승인 서명
@@ -1348,6 +1367,22 @@ document.getElementById('approveBtn').addEventListener('click', function(){
   approvePopup.style.display = 'flex';
   document.getElementById('signatureError').style.display = 'none';
 
+  const siteCodeConfirmBlock = document.getElementById('siteCodeConfirmBlock');
+  const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
+  const siteCodeConfirmError = document.getElementById('siteCodeConfirmError');
+
+  if(siteCodeConfirmError){
+    siteCodeConfirmError.style.display = 'none';
+  }
+
+  if(approvalStep === '1'){
+    siteCodeConfirmBlock.style.display = 'block';
+    siteCodeConfirmInput.value = siteCode && siteCode !== '-' ? siteCode : '';
+  }else{
+    siteCodeConfirmBlock.style.display = 'none';
+    siteCodeConfirmInput.value = '';
+  }
+
   setTimeout(resizeSignatureCanvas, 100);
 });
 
@@ -1523,6 +1558,34 @@ async function confirmApproval(){
     return;
   }
 
+  let confirmedSiteCode = siteCode;
+
+  if(approvalStep === '1'){
+  const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
+  const siteCodeConfirmError = document.getElementById('siteCodeConfirmError');
+
+  confirmedSiteCode = siteCodeConfirmInput.value.trim();
+
+  if(!confirmedSiteCode){
+    siteCodeConfirmError.innerText = '현장코드를 입력해주세요.';
+    siteCodeConfirmError.style.display = 'block';
+    return;
+  }
+
+  if(!/^[0-9]+$/.test(confirmedSiteCode)){
+    siteCodeConfirmError.innerText = '현장코드는 숫자만 입력할 수 있습니다.';
+    siteCodeConfirmError.style.display = 'block';
+    return;
+  }
+
+  siteCode = confirmedSiteCode;
+  document.getElementById('siteCode').innerText = confirmedSiteCode;
+}
+
+    siteCode = confirmedSiteCode;
+    document.getElementById('siteCode').innerText = confirmedSiteCode;
+  }
+
   const signatureImage = signatureCanvas.toDataURL('image/png');
 
   approvePopup.style.display = 'none';
@@ -1531,7 +1594,7 @@ async function confirmApproval(){
     ? 'approved_2nd'
     : 'approved_1st';
 
-  await sendWebhook(approvalStatus, '', signatureImage, '');
+  await sendWebhook(approvalStatus, '', signatureImage, '', confirmedSiteCode);
 }
 
 async function confirmReject(){
@@ -1729,8 +1792,7 @@ async function uploadFinalEstimate(){
   }
 }
 
-async function sendWebhook(status, rejectReasonText = '', signatureImage = '', rejectProcessor = ''){
-  if(checkExpiration()){
+async function sendWebhook(status, rejectReasonText = '', signatureImage = '', rejectProcessor = '', siteCodeConfirmed = ''){
     showExpired();
     return;
   }
@@ -1757,6 +1819,7 @@ async function sendWebhook(status, rejectReasonText = '', signatureImage = '', r
         approverRole: approverRole,
         status: status,
         siteCode: siteCode,
+        siteCodeConfirmed: siteCodeConfirmed || siteCode,
         siteAddress: siteAddress,
         manager: manager,
         vendor: vendorName,
