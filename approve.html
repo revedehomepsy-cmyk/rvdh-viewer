@@ -1485,14 +1485,14 @@ async function confirmReassign(){
     closeReassignPopup();
 
     if(isSecondStepRecheck){
-      document.getElementById('status').innerText = '1차 재확인 요청';
-      alert('1차 승인자 재확인 요청이 완료되었습니다.');
-    }else{
-      manager = newManager;
-      document.getElementById('status').innerText = '재할당';
-      document.getElementById('manager').innerText = newManager;
-      alert('재할당 요청이 완료되었습니다.');
-    }
+  document.getElementById('status').innerText = '1차 재확인 요청';
+  finishAndClosePage('1차 승인자 재확인 요청이 완료되었습니다.');
+}else{
+  manager = newManager;
+  document.getElementById('status').innerText = '재할당';
+  document.getElementById('manager').innerText = newManager;
+  finishAndClosePage('재할당 요청이 완료되었습니다.');
+}
 
   }catch(error){
     console.error(error);
@@ -1580,6 +1580,26 @@ async function uploadFinalEstimate(){
   }
 }
 
+function lockApprovalPage(message){
+  const approveBtn = document.getElementById('approveBtn');
+  const rejectBtn = document.getElementById('rejectBtn');
+  const reassignBtn = document.getElementById('reassignBtn');
+  const comment = document.getElementById('comment');
+  const uploadBtn = document.getElementById('uploadFinalEstimateBtn');
+
+  if(approveBtn) approveBtn.disabled = true;
+  if(rejectBtn) rejectBtn.disabled = true;
+  if(reassignBtn) reassignBtn.disabled = true;
+  if(comment) comment.disabled = true;
+  if(uploadBtn) uploadBtn.disabled = true;
+
+  const status = document.getElementById('status');
+
+  if(status){
+    status.innerText = message || '처리 완료';
+  }
+}
+  
 function finishAndClosePage(message){
   lockApprovalPage(message || '처리가 완료되었습니다.');
 
@@ -1676,21 +1696,25 @@ async function sendWebhook(status, rejectReasonText = '', signatureImage = '', r
       document.getElementById('status').innerText = '반려';
     }
 
-    alert(
-      status === 'approved_2nd'
-        ? '2차 승인이 완료되었습니다.'
-        : status === 'approved_1st'
-          ? '1차 승인이 완료되었습니다.'
-          : '반려 처리되었습니다.'
-    );
+    const completeMessage =
+  status === 'approved_2nd'
+    ? '2차 승인이 완료되었습니다.'
+    : status === 'approved_1st'
+      ? '1차 승인이 완료되었습니다.'
+      : '반려 처리가 완료되었습니다.';
+
+finishAndClosePage(completeMessage);
 
   }catch(error){
-    console.error(error);
-    alert('오류가 발생했습니다. 다시 시도해주세요.');
+  console.error(error);
+  alert('오류가 발생했습니다. 다시 시도해주세요.');
 
-    approveBtn.disabled = false;
-    rejectBtn.disabled = false;
-  }
+  approveBtn.disabled = false;
+  rejectBtn.disabled = false;
+
+  const reassignBtn = document.getElementById('reassignBtn');
+  if(reassignBtn) reassignBtn.disabled = false;
+}
 }
 </script>
 
