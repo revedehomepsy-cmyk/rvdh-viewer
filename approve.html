@@ -152,7 +152,8 @@ textarea::placeholder{
 }
 
 .textInput,
-.moneyInput{
+.moneyInput,
+select.textInput{
   width:100%;
   height:56px;
   margin-top:14px;
@@ -669,7 +670,7 @@ button:disabled{
         <div class="label">1차 승인 담당자</div>
         <div class="value" id="firstApproverName">-</div>
       </div>
-      
+
       <div>
         <div class="label">승인 단계</div>
         <div class="value" id="approvalStepText">-</div>
@@ -827,7 +828,7 @@ button:disabled{
       발주서와 명세서 내용을 다시 한번 확인한 뒤, 아래 서명란에 서명해주세요.
     </div>
 
-    <div id="siteCodeConfirmBlock" style="display:none; margin-top:18px;">
+    <div id="approvalRequiredInfoBlock" style="display:none; margin-top:18px;">
       <div class="label">현장코드 확인</div>
 
       <input
@@ -836,15 +837,52 @@ button:disabled{
         type="text"
         inputmode="numeric"
         pattern="[0-9]*"
-        placeholder="숫자만 입력해주세요."
+        placeholder="현장코드를 숫자로 입력해주세요."
       >
 
       <div class="noticeText">
-        * 1차 승인 시 현장코드 입력은 필수입니다. 입력한 현장코드는 Notion에 반영됩니다.
+        * 1차 승인 시 현장코드, 공정, 세부항목 입력은 필수입니다.
       </div>
 
-      <div class="errorText" id="siteCodeConfirmError">
-        현장코드를 입력해주세요.
+      <div style="margin-top:18px;">
+        <div class="label">공정 선택</div>
+
+        <select id="processSelect" class="textInput">
+          <option value="">공정을 선택해주세요</option>
+          <option value="가설공사">가설공사</option>
+          <option value="철거설비공사">철거설비공사</option>
+          <option value="전기공사">전기공사</option>
+          <option value="금속공사">금속공사</option>
+          <option value="목공사">목공사</option>
+          <option value="타일공사">타일공사</option>
+          <option value="도장공사">도장공사</option>
+          <option value="필름공사">필름공사</option>
+          <option value="마루공사">마루공사</option>
+          <option value="도배공사">도배공사</option>
+          <option value="기타공사">기타공사</option>
+          <option value="제작도어">제작도어</option>
+          <option value="기타제작">기타제작</option>
+          <option value="욕실,주방 제품비">욕실,주방 제품비</option>
+          <option value="철물 제품비">철물 제품비</option>
+          <option value="전기 제품비">전기 제품비</option>
+          <option value="제작가구">제작가구</option>
+          <option value="공조비">공조비</option>
+          <option value="창호비">창호비</option>
+          <option value="유지보수">유지보수</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+
+      <div style="margin-top:18px;">
+        <div class="label">세부항목 선택</div>
+
+        <select id="detailItemSelect" class="textInput">
+          <option value="">먼저 공정을 선택해주세요</option>
+        </select>
+      </div>
+
+      <div class="errorText" id="approvalRequiredInfoError">
+        현장코드, 공정, 세부항목을 모두 입력해주세요.
       </div>
     </div>
 
@@ -980,6 +1018,215 @@ const REASSIGN_WEBHOOK_URL = MAKE_WEBHOOK_URL;
 const STATUS_CHECK_WEBHOOK_URL = 'https://hook.eu1.make.com/50sf7iit995gnnjyob0qs1etu5phdr77';
 
 const FINAL_ESTIMATE_UPLOAD_WEBHOOK_URL = 'https://hook.eu1.make.com/최종견적서업로드_WEBHOOK_URL';
+
+const DETAIL_ITEMS_BY_PROCESS = {
+  '가설공사': [
+    '01.가설_준비',
+    '01.가설_운송',
+    '01.가설_기타'
+  ],
+
+  '철거설비공사': [
+    '02.철거_상담',
+    '02.철거_마루',
+    '02.철거_폐기물',
+    '02.철거설비_일반',
+    '02.철거설비_추가',
+    '02.설비_매립',
+    '02.설비_수도난방',
+    '02.설비_보일러',
+    '02.설비_스프링쿨',
+    '02.설비_수평몰탈',
+    '02.조적_인건비',
+    '02.조적_자재비',
+    '02.조적_양중비',
+    '02.설비_부자재',
+    '02.설비_기타'
+  ],
+
+  '전기공사': [
+    '03.전기_시공비',
+    '03.전기_추가로스'
+  ],
+
+  '금속공사': [
+    '04.금속_인건비',
+    '04.금속_추가로스',
+    '04.금속_자재비',
+    '04.금속_제작비',
+    '04.금속_폐기물'
+  ],
+
+  '목공사': [
+    '05.목공_인건비',
+    '05.목공_추가로스',
+    '05.목공_양중비',
+    '05.목공_자재비',
+    '05.목공_특수단열',
+    '05.목공_폐기물'
+  ],
+
+  '타일공사': [
+    '06.타일_인건비',
+    '06.타일_추가로스',
+    '06.타일_양중비',
+    '06.타일_부자재비',
+    '06.타일_자재비',
+    '06.타일_폐기물'
+  ],
+
+  '도장공사': [
+    '08.도장_발코니',
+    '08.도장_인건비',
+    '08.도장_추가로스',
+    '08.도장_자재비'
+  ],
+
+  '필름공사': [
+    '07.필름_인건비',
+    '07.필름_추가로스',
+    '07.필름_자재비',
+    '07.필름_특수시공'
+  ],
+
+  '마루공사': [
+    '09.마루_강마루',
+    '09.마루_원목마루',
+    '09.마루_기능성',
+    '09.마루_부자재비',
+    '09.마루_추가로스'
+  ],
+
+  '도배공사': [
+    '10.도배_전체',
+    '10.도배_인건비',
+    '10.도배_부자재비',
+    '10.도배_추가로스',
+    '10.도배_자재비'
+  ],
+
+  '기타공사': [
+    '11.기타_청소비',
+    '11.기타_실리콘비',
+    '11.기타_조경',
+    '11.기타_기타',
+    '11.기타_난간',
+    '11.기타_방화판',
+    '11.기타_바닥마감',
+    '11.기타_천장마감',
+    '11.기타_벽마감',
+    '11.기타_공과잡비',
+    '11.기타_욕실시공'
+  ],
+
+  '제작도어': [
+    '13.제작_중문비',
+    '13.제작_백골도어',
+    '13.제작_고급도어',
+    '13.제작_철제도어',
+    '13.제작_터닝도어',
+    '13.제작_기타도어',
+    '13.제작_추가로스'
+  ],
+
+  '기타제작': [
+    '14.기타제작_거울',
+    '14.기타제작_유리',
+    '14.기타제작_일반',
+    '14.기타제작_1',
+    '14.기타제작_2',
+    '14.기타제작_3',
+    '14.기타제작_4',
+    '14.기타제작_디자',
+    '14.기타제작_로스'
+  ],
+
+  '욕실,주방 제품비': [
+    '15.욕실주방_제품',
+    '15.제품비_로스'
+  ],
+
+  '철물 제품비': [
+    '15.철물_제품',
+    '15.제품비_로스'
+  ],
+
+  '전기 제품비': [
+    '15.전기_제품',
+    '15.제품비_로스'
+  ],
+
+  '제작가구': [
+    '12.제작_가구비_전체',
+    '12.제작_가구비A',
+    '12.제작_가구시공',
+    '12.제작_가구비B',
+    '12.제작_가구비C',
+    '12.제작_가구비D',
+    '12.제작_하드웨어',
+    '12.제작_시스템장',
+    '12.무늬목_종합',
+    '12.상판_스텐상판',
+    '12.상판_세라믹',
+    '12.상판_천연대리',
+    '12.상판_칸스톤',
+    '12.상판_인조대리',
+    '12.상판_시공비',
+    '12.제작_추가로스'
+  ],
+
+  '공조비': [
+    '16.에어컨비',
+    '16.전열교환기비',
+    '16.공조_기타',
+    '16.공조_추가로스'
+  ],
+
+  '창호비': [
+    '17.창호_제작비',
+    '17.창호_터닝도어',
+    '17.창호_시공비',
+    '17.창호_기타',
+    '17.창호_추가로스'
+  ],
+
+  '유지보수': [
+    '20.유지보수_무상',
+    '20.유지보수_유상'
+  ],
+
+  '기타': [
+    ',광고선전(마케팅)',
+    ',스타일링(마케팅)',
+    ',외주(디인건)',
+    ',외주감리(현인건)',
+    ',촬영(마케팅)'
+  ]
+};
+
+function updateDetailItemOptions(processName){
+  const detailSelect = document.getElementById('detailItemSelect');
+
+  if(!detailSelect) return;
+
+  detailSelect.innerHTML = '';
+
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.textContent = processName ? '세부항목을 선택해주세요' : '먼저 공정을 선택해주세요';
+  detailSelect.appendChild(defaultOption);
+
+  if(!processName || !DETAIL_ITEMS_BY_PROCESS[processName]){
+    return;
+  }
+
+  DETAIL_ITEMS_BY_PROCESS[processName].forEach(function(item){
+    const option = document.createElement('option');
+    option.value = item;
+    option.textContent = item;
+    detailSelect.appendChild(option);
+  });
+}
 
 const params = new URLSearchParams(window.location.search);
 
@@ -1358,21 +1605,39 @@ document.getElementById('approveBtn').addEventListener('click', function(){
   approvePopup.style.display = 'flex';
   document.getElementById('signatureError').style.display = 'none';
 
-  const siteCodeConfirmBlock = document.getElementById('siteCodeConfirmBlock');
+  const approvalRequiredInfoBlock = document.getElementById('approvalRequiredInfoBlock');
   const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
-  const siteCodeConfirmError = document.getElementById('siteCodeConfirmError');
+  const approvalRequiredInfoError = document.getElementById('approvalRequiredInfoError');
+  const processSelect = document.getElementById('processSelect');
+  const detailItemSelect = document.getElementById('detailItemSelect');
 
-  if(siteCodeConfirmError){
-    siteCodeConfirmError.style.display = 'none';
+  if(approvalRequiredInfoError){
+    approvalRequiredInfoError.style.display = 'none';
   }
 
-  if(siteCodeConfirmBlock && siteCodeConfirmInput){
+  if(approvalRequiredInfoBlock && siteCodeConfirmInput){
     if(approvalStep === '1'){
-      siteCodeConfirmBlock.style.display = 'block';
+      approvalRequiredInfoBlock.style.display = 'block';
       siteCodeConfirmInput.value = siteCode && siteCode !== '-' ? String(siteCode).replace(/[^0-9]/g, '') : '';
+
+      if(processSelect){
+        processSelect.value = '';
+      }
+
+      if(detailItemSelect){
+        updateDetailItemOptions('');
+      }
     }else{
-      siteCodeConfirmBlock.style.display = 'none';
+      approvalRequiredInfoBlock.style.display = 'none';
       siteCodeConfirmInput.value = '';
+
+      if(processSelect){
+        processSelect.value = '';
+      }
+
+      if(detailItemSelect){
+        updateDetailItemOptions('');
+      }
     }
   }
 
@@ -1384,6 +1649,14 @@ const siteCodeConfirmInputEl = document.getElementById('siteCodeConfirmInput');
 if(siteCodeConfirmInputEl){
   siteCodeConfirmInputEl.addEventListener('input', function(){
     this.value = this.value.replace(/[^0-9]/g, '');
+  });
+}
+
+const processSelectEl = document.getElementById('processSelect');
+
+if(processSelectEl){
+  processSelectEl.addEventListener('change', function(){
+    updateDetailItemOptions(this.value);
   });
 }
 
@@ -1560,33 +1833,61 @@ async function confirmApproval(){
   }
 
   let confirmedSiteCode = siteCode;
+  let selectedProcessName = '';
+  let selectedDetailItem = '';
 
   if(approvalStep === '1'){
     const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
-    const siteCodeConfirmError = document.getElementById('siteCodeConfirmError');
+    const approvalRequiredInfoError = document.getElementById('approvalRequiredInfoError');
+    const processSelect = document.getElementById('processSelect');
+    const detailItemSelect = document.getElementById('detailItemSelect');
 
     if(siteCodeConfirmInput){
       confirmedSiteCode = siteCodeConfirmInput.value.trim();
-
-      if(!confirmedSiteCode){
-        if(siteCodeConfirmError){
-          siteCodeConfirmError.innerText = '현장코드를 입력해주세요.';
-          siteCodeConfirmError.style.display = 'block';
-        }
-        return;
-      }
-
-      if(!/^[0-9]+$/.test(confirmedSiteCode)){
-        if(siteCodeConfirmError){
-          siteCodeConfirmError.innerText = '현장코드는 숫자만 입력할 수 있습니다.';
-          siteCodeConfirmError.style.display = 'block';
-        }
-        return;
-      }
-
-      siteCode = confirmedSiteCode;
-      document.getElementById('siteCode').innerText = confirmedSiteCode;
     }
+
+    if(processSelect){
+      selectedProcessName = processSelect.value.trim();
+    }
+
+    if(detailItemSelect){
+      selectedDetailItem = detailItemSelect.value.trim();
+    }
+
+    if(!confirmedSiteCode){
+      if(approvalRequiredInfoError){
+        approvalRequiredInfoError.innerText = '현장코드를 입력해주세요.';
+        approvalRequiredInfoError.style.display = 'block';
+      }
+      return;
+    }
+
+    if(!/^[0-9]+$/.test(confirmedSiteCode)){
+      if(approvalRequiredInfoError){
+        approvalRequiredInfoError.innerText = '현장코드는 숫자만 입력할 수 있습니다.';
+        approvalRequiredInfoError.style.display = 'block';
+      }
+      return;
+    }
+
+    if(!selectedProcessName){
+      if(approvalRequiredInfoError){
+        approvalRequiredInfoError.innerText = '공정을 선택해주세요.';
+        approvalRequiredInfoError.style.display = 'block';
+      }
+      return;
+    }
+
+    if(!selectedDetailItem){
+      if(approvalRequiredInfoError){
+        approvalRequiredInfoError.innerText = '세부항목을 선택해주세요.';
+        approvalRequiredInfoError.style.display = 'block';
+      }
+      return;
+    }
+
+    siteCode = confirmedSiteCode;
+    document.getElementById('siteCode').innerText = confirmedSiteCode;
   }
 
   const signatureImage = signatureCanvas.toDataURL('image/png');
@@ -1597,7 +1898,15 @@ async function confirmApproval(){
     ? 'approved_2nd'
     : 'approved_1st';
 
-  await sendWebhook(approvalStatus, '', signatureImage, '', confirmedSiteCode);
+  await sendWebhook(
+    approvalStatus,
+    '',
+    signatureImage,
+    '',
+    confirmedSiteCode,
+    selectedProcessName,
+    selectedDetailItem
+  );
 }
 
 async function confirmReject(){
@@ -1795,7 +2104,15 @@ async function uploadFinalEstimate(){
   }
 }
 
-async function sendWebhook(status, rejectReasonText = '', signatureImage = '', rejectProcessor = '', siteCodeConfirmed = ''){
+async function sendWebhook(
+  status,
+  rejectReasonText = '',
+  signatureImage = '',
+  rejectProcessor = '',
+  siteCodeConfirmed = '',
+  processName = '',
+  detailItem = ''
+){
   if(checkExpiration()){
     showExpired();
     return;
@@ -1824,6 +2141,8 @@ async function sendWebhook(status, rejectReasonText = '', signatureImage = '', r
         status: status,
         siteCode: siteCode,
         siteCodeConfirmed: siteCodeConfirmed || siteCode,
+        processName: processName,
+        detailItem: detailItem,
         siteAddress: siteAddress,
         manager: manager,
         vendor: vendorName,
