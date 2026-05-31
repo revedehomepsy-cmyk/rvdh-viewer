@@ -676,6 +676,16 @@ button:disabled{
         <div class="value" id="approvalStepText">-</div>
       </div>
 
+      <div id="processInfoBox" style="display:none;">
+        <div class="label">공정</div>
+        <div class="value" id="processNameView">-</div>
+      </div>
+
+      <div id="detailItemInfoBox" style="display:none;">
+        <div class="label">세부항목</div>
+        <div class="value" id="detailItemView">-</div>
+      </div>
+
       <div class="infoFull">
         <div class="label">청구 금액 (VAT 포함)</div>
         <div class="amount" id="amount">-</div>
@@ -1269,6 +1279,8 @@ let manager = safeDecode(getParam('manager'), '-');
 let vendorName = safeDecode(getParam('vendor'), '-');
 let vendorEmail = safeDecode(getParam('vendorEmail'), '-');
 let amount = safeDecode(getParam('amount'), '-');
+let processName = safeDecode(getParam('processName'), '');
+let detailItem = safeDecode(getParam('detailItem'), '');
 
 const orderViewer = safeDecode(getParam('order'), '');
 const specViewer = safeDecode(getParam('spec'), '');
@@ -1346,6 +1358,31 @@ function applyApprovalData(){
   document.getElementById('vendorName').innerText = vendorName;
   document.getElementById('vendorEmail').innerText = vendorEmail;
   document.getElementById('amount').innerText = formatAmount(amount);
+
+  const processInfoBox = document.getElementById('processInfoBox');
+  const processNameView = document.getElementById('processNameView');
+  const detailItemInfoBox = document.getElementById('detailItemInfoBox');
+  const detailItemView = document.getElementById('detailItemView');
+
+  if(processInfoBox && processNameView){
+    if(approvalStep === '2' && processName && processName !== '-'){
+      processInfoBox.style.display = 'block';
+      processNameView.innerText = processName;
+    }else{
+      processInfoBox.style.display = 'none';
+      processNameView.innerText = '-';
+    }
+  }
+
+  if(detailItemInfoBox && detailItemView){
+    if(approvalStep === '2' && detailItem && detailItem !== '-'){
+      detailItemInfoBox.style.display = 'block';
+      detailItemView.innerText = detailItem;
+    }else{
+      detailItemInfoBox.style.display = 'none';
+      detailItemView.innerText = '-';
+    }
+  }
 
   const firstApproverInfoBox = document.getElementById('firstApproverInfoBox');
   const firstApproverName = document.getElementById('firstApproverName');
