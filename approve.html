@@ -1346,17 +1346,64 @@ function applyStepUI(){
     reassignBtn.innerText = '재할당하기';
   }
 }
-
-function setViewerButton(button, url, emptyText){
-  if(url && url !== '#'){
-    button.href = url;
-    button.classList.remove('disabled');
-    button.innerText = button.id === 'orderButton' ? '발주서 보기' : '명세서 보기';
-  }else{
-    button.removeAttribute('href');
-    button.classList.add('disabled');
-    button.innerText = emptyText;
+function getWatermarkName(){
+  if(approvalStep === '2' && firstApprover && firstApprover !== '-'){
+    return firstApprover;
   }
+
+  if(manager && manager !== '-'){
+    return manager;
+  }
+
+  return '';
+}
+
+function addWatermarkToViewerUrl(url){
+  if(!url || url === '#') return url;
+
+  const cleanUrl = String(url).trim();
+
+  if(!cleanUrl || cleanUrl === '[object Object]' || cleanUrl.includes('[object Object]')){
+    return '';
+  }
+
+  const watermarkName = getWatermarkName();
+
+  if(!watermarkName) return cleanUrl;
+
+  if(cleanUrl.includes('watermark=')){
+    return cleanUrl;
+  }
+
+  const separator = cleanUrl.includes('?') ? '&' : '?';
+
+  return cleanUrl + separator + 'watermark=' + encodeURIComponent(watermarkName);
+}
+  
+function setViewerButton(button, url, emptyText){
+  const cleanUrl = String(url || '').trim();
+
+  if(
+    cleanUrl &&
+    cleanUrl !== '#' &&
+    cleanUrl !== '[object Object]' &&
+    !cleanUrl.includes('[object Object]')
+  ){
+    const finalUrl = button.id === 'specButton'
+      ? addWatermarkToViewerUrl(cleanUrl)
+      : cleanUrl;
+
+    if(finalUrl){
+      button.href = finalUrl;
+      button.classList.remove('disabled');
+      button.innerText = button.id === 'orderButton' ? '발주서 보기' : '명세서 보기';
+      return;
+    }
+  }
+
+  button.removeAttribute('href');
+  button.classList.add('disabled');
+  button.innerText = emptyText;
 }
 
 function applyApprovalData(){
