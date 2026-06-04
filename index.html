@@ -45,6 +45,13 @@ body{
   padding:12px;
 }
 
+.imageInner{
+  position:relative;
+  overflow:hidden;
+  border-radius:12px;
+  background:white;
+}
+
 .imageWrap img{
   display:block;
   width:100%;
@@ -54,6 +61,16 @@ body{
   pointer-events:none;
   -webkit-user-drag:none;
   user-select:none;
+}
+
+.watermarkLayer{
+  position:absolute;
+  inset:0;
+  z-index:5;
+  pointer-events:none;
+  background-repeat:repeat;
+  opacity:.11;
+  mix-blend-mode:multiply;
 }
 
 .fileWrap{
@@ -145,6 +162,7 @@ const params = new URLSearchParams(window.location.search);
 const singleImg = params.get('img');
 const multiImgs = params.get('imgs');
 const mixedItems = params.get('items');
+const watermarkText = decodeSafe(params.get('watermark') || '');
 
 const content = document.getElementById('content');
 
@@ -170,11 +188,118 @@ function renderEmpty(){
   content.innerHTML = '<div class="empty">표시할 문서가 없습니다.</div>';
 }
 
+function sanitizeUrl(url){
+  const cleanUrl = decodeSafe(url || '').trim();
+
+  if(!cleanUrl) return '';
+
+  if(cleanUrl === '[object Object]' || cleanUrl.includes('[object Object]')){
+    return '';
+  }
+
+  return cleanUrl;
+}
+
+function createWatermarkDataUrl(text){
+  if(!text) return '';
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 360;
+  canvas.height = 220;
+
+  const ctx = canvas.getContext('2d');
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.translate(180, 120);
+  ctx.rotate(-28 * Math.PI / 180);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.font = '700 22px -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif';
+  ctx.fillStyle = 'rgba(80, 58, 42, 0.42)';
+  ctx.fillText(text, 0, -8);
+
+  ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif';
+  ctx.fillStyle = 'rgba(80, 58, 42, 0.30)';
+  ctx.fillText('RVDH CONFIDENTIAL', 0, 18);
+
+  ctx.restore();
+
+  return canvas.toDataURL('image/png');
+}
+
+const watermarkDataUrl = createWatermarkDataUrl(watermarkText);
+
+function appendWatermarkLayer(parent){
+  if(!watermarkDataUrl) return;
+
+  const layer = document.createElement('div');
+  layer.className = 'watermarkLayer';
+  layer.style.backgroundImage = `url("${watermarkDataUrl}")`;
+
+  parent.appendChild(layer);
+}
+
+function createImageBlock(url, index){
+  const cleanUrl = sanitizeUrl(url);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'imageWrap';
+
+  const label = document.createElement('div');
+  label.className = 'pageLabel';
+  label.textContent = `${index + 1} 페이지`;
+
+  const inner = document.createElement('div');
+  inner.className = 'imageInner';
+
+  const img = document.createElement('img');
+  img.src = cleanUrl;
+  img.alt = `${index + 1} 페이지`;
+
+  img.addEventListener('dragstart', e => e.preventDefault());
+
+  img.onerror = function(){
+    wrap.innerHTML = '';
+
+    const title = document.createElement('div');
+    title.className = 'fileTitle';
+    title.textContent = `${index + 1}번 첨부파일`;
+
+    const notice = document.createElement('div');
+    notice.className = 'notice';
+    notice.textContent = '이미지를 불러오지 못했습니다. 아래 버튼으로 확인해주세요.';
+
+    const button = document.createElement('a');
+    button.className = 'fileButton';
+    button.href = cleanUrl;
+    button.target = '_blank';
+    button.rel = 'noopener noreferrer';
+    button.textContent = '파일 보기';
+
+    wrap.className = 'fileWrap';
+    wrap.appendChild(title);
+    wrap.appendChild(button);
+    wrap.appendChild(notice);
+  };
+
+  inner.appendChild(img);
+  appendWatermarkLayer(inner);
+
+  wrap.appendChild(label);
+  wrap.appendChild(inner);
+
+  return wrap;
+}
+
 function renderImages(urls){
   content.innerHTML = '';
 
   const cleanUrls = urls
-    .map(v => v.trim())
+    .map(v => sanitizeUrl(v))
     .filter(Boolean);
 
   if(!cleanUrls.length){
@@ -183,46 +308,7 @@ function renderImages(urls){
   }
 
   cleanUrls.forEach((url, index) => {
-    const wrap = document.createElement('div');
-    wrap.className = 'imageWrap';
-
-    const label = document.createElement('div');
-    label.className = 'pageLabel';
-    label.textContent = `${index + 1} 페이지`;
-
-    const img = document.createElement('img');
-    img.src = url;
-    img.alt = `${index + 1} 페이지`;
-
-    img.addEventListener('dragstart', e => e.preventDefault());
-
-    img.onerror = function(){
-      wrap.innerHTML = '';
-
-      const title = document.createElement('div');
-      title.className = 'fileTitle';
-      title.textContent = `${index + 1}번 첨부파일`;
-
-      const notice = document.createElement('div');
-      notice.className = 'notice';
-      notice.textContent = '이미지를 불러오지 못했습니다. 아래 버튼으로 확인해주세요.';
-
-      const button = document.createElement('a');
-      button.className = 'fileButton';
-      button.href = url;
-      button.target = '_blank';
-      button.rel = 'noopener noreferrer';
-      button.textContent = '파일 보기';
-
-      wrap.className = 'fileWrap';
-      wrap.appendChild(title);
-      wrap.appendChild(button);
-      wrap.appendChild(notice);
-    };
-
-    wrap.appendChild(label);
-    wrap.appendChild(img);
-    content.appendChild(wrap);
+    content.appendChild(createImageBlock(url, index));
   });
 }
 
@@ -249,49 +335,12 @@ function renderItems(items){
       url = item.slice(separatorIndex + 2).trim();
     }
 
+    url = sanitizeUrl(url);
+
     if(!url) return;
 
     if(type === 'image' || type === 'img'){
-      const wrap = document.createElement('div');
-      wrap.className = 'imageWrap';
-
-      const label = document.createElement('div');
-      label.className = 'pageLabel';
-      label.textContent = `${index + 1} 페이지`;
-
-      const img = document.createElement('img');
-      img.src = url;
-      img.alt = `${index + 1} 페이지`;
-
-      img.addEventListener('dragstart', e => e.preventDefault());
-
-      img.onerror = function(){
-        wrap.innerHTML = '';
-
-        const title = document.createElement('div');
-        title.className = 'fileTitle';
-        title.textContent = `${index + 1}번 첨부파일`;
-
-        const notice = document.createElement('div');
-        notice.className = 'notice';
-        notice.textContent = '이미지를 불러오지 못했습니다. 아래 버튼으로 확인해주세요.';
-
-        const button = document.createElement('a');
-        button.className = 'fileButton';
-        button.href = url;
-        button.target = '_blank';
-        button.rel = 'noopener noreferrer';
-        button.textContent = '파일 보기';
-
-        wrap.className = 'fileWrap';
-        wrap.appendChild(title);
-        wrap.appendChild(button);
-        wrap.appendChild(notice);
-      };
-
-      wrap.appendChild(label);
-      wrap.appendChild(img);
-      content.appendChild(wrap);
+      content.appendChild(createImageBlock(url, index));
       return;
     }
 
