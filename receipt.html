@@ -19,7 +19,7 @@ body{margin:0;background:#3B2A1D;color:white;font-family:-apple-system,BlinkMacS
 <div class="popup" id="rejectPopup"><div class="popupBox"><div class="popupTitle">반려 사유 작성</div><div class="popupDesc">반려 처리 시 사유를 반드시 작성해주세요.<br>작성한 내용은 발주자와 내부 기록에 남길 수 있습니다.</div><div class="label">반려 처리자 이름</div><input id="rejectProcessorName" class="textInput" type="text" placeholder="반려 처리자 이름을 입력해주세요."><textarea id="rejectReason" placeholder="반려 사유를 입력해주세요."></textarea><div class="errorText" id="rejectError">반려 처리자 이름과 반려 사유를 입력해주세요.</div><div class="popupButtons"><button class="cancelBtn" onclick="closeRejectPopup()">취소</button><button class="confirmRejectBtn" onclick="confirmReject()">반려 확정</button></div></div></div>
 <script>
 const ACCESS_PASSWORD='0723';
-const RECEIPT_WEBHOOK_URL='https://hook.eu1.make.com/영수지급승인_WEBHOOK_URL';
+const RECEIPT_WEBHOOK_URL='https://hook.eu1.make.com/s66wtengl28xe1qygo53psswiekmbgev';
 const RECEIPT_STATUS_CHECK_WEBHOOK_URL='https://hook.eu1.make.com/영수지급상태조회_WEBHOOK_URL';
 const params=new URLSearchParams(window.location.search);
 function getParam(name,fallback=''){return params.get(name)||fallback;}
