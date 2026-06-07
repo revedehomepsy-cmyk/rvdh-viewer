@@ -38,7 +38,47 @@ function showExpired(){document.getElementById('expiredScreen').style.display='f
 function showCompletedPage(message){document.getElementById('passwordScreen').style.display='none';document.getElementById('expiredScreen').style.display='none';document.getElementById('mainContent').style.display='none';const existing=document.getElementById('completedScreen');if(existing)existing.remove();const screen=document.createElement('div');screen.id='completedScreen';screen.style.position='fixed';screen.style.inset='0';screen.style.background='#3B2A1D';screen.style.color='white';screen.style.display='flex';screen.style.alignItems='center';screen.style.justifyContent='center';screen.style.textAlign='center';screen.style.padding='24px';screen.style.zIndex='20000';screen.innerHTML=`<div style="max-width:420px;"><img src="./logo_white.svg" style="max-width:190px; margin-bottom:28px;" alt="RVDH Logo"><div style="font-size:24px; font-weight:700; margin-bottom:14px;">작업이 완료되었습니다</div><div style="color:rgba(255,255,255,.68); line-height:1.7;">${message||'이미 처리된 영수 지급 승인 건입니다.'}<br>이 창은 더 이상 승인 또는 반려를 진행할 수 없습니다.</div></div>`;document.body.appendChild(screen);}
 function lockApprovalPage(message){showCompletedPage(message||'이미 처리된 영수 지급 승인 건입니다.');}
 function finishAndClosePage(message){showCompletedPage(message||'처리가 완료되었습니다.');setTimeout(function(){window.close();},2500);}
-async function checkCurrentApprovalStatus(){if(!RECEIPT_STATUS_CHECK_WEBHOOK_URL||RECEIPT_STATUS_CHECK_WEBHOOK_URL.includes('영수지급상태조회_WEBHOOK_URL')||!receiptId){console.log('상태조회 생략: URL 또는 receiptId 없음');return;}try{const response=await fetch(RECEIPT_STATUS_CHECK_WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:receiptId,type:'receiptStatusCheck'})});if(!response.ok){console.error('Receipt status check failed:',response.status);return;}let data={};try{data=await response.json();}catch(jsonError){console.error('상태조회 응답 JSON 파싱 실패:',jsonError);return;}const currentStatus=data.currentStatus||'';if(!currentStatus)return;const allowedStatuses=['검토중','재검토','영수 지급 검토중'];if(!allowedStatuses.includes(currentStatus)){lockApprovalPage('이미 처리된 영수 지급 승인 건입니다.');}}catch(error){console.error('Receipt approval status check error:',error);}}
+async function checkCurrentApprovalStatus(){if(!RECEIPT_STATUS_CHECK_WEBHOOK_URL||RECEIPT_STATUS_CHECK_WEBHOOK_URL.includes('영수지급상태조회_WEBHOOK_URL')||!receiptId){console.log('상태조회 생략: URL 또는 receiptId 없음');return;}try{const formData = new FormData();
+
+formData.append('type', 'receiptApproval');
+formData.append('id', receiptId);
+formData.append('token', receiptToken);
+formData.append('notionItemId', notionItemId);
+formData.append('status', status);
+
+formData.append('companyName', companyName);
+formData.append('requester', requester);
+formData.append('siteCode', siteCode);
+formData.append('siteAddress', siteAddress);
+formData.append('detailDescription', detailDescription);
+formData.append('processName', processName);
+formData.append('detailItem', detailItem);
+formData.append('amount', amount);
+formData.append('expenseType', expenseType);
+formData.append('consumerReason', consumerReason);
+formData.append('taxProofStatus', taxProofStatus);
+formData.append('memo', memo);
+
+formData.append('order', orderViewer);
+formData.append('statement', statementViewer);
+formData.append('proof', proofViewer);
+formData.append('extra', extraViewer);
+
+formData.append('approvalMemo', document.getElementById('comment').value);
+formData.append('approverName', approverName);
+formData.append('rejectReason', rejectReasonText);
+formData.append('rejectProcessor', rejectProcessor);
+formData.append('signatureImage', signatureImage);
+formData.append('comment', status === 'approved'
+  ? document.getElementById('comment').value
+  : rejectReasonText
+);
+formData.append('submittedAt', new Date().toISOString());
+
+const response = await fetch(RECEIPT_WEBHOOK_URL,{
+  method:'POST',
+  body: formData
+});if(!response.ok){console.error('Receipt status check failed:',response.status);return;}let data={};try{data=await response.json();}catch(jsonError){console.error('상태조회 응답 JSON 파싱 실패:',jsonError);return;}const currentStatus=data.currentStatus||'';if(!currentStatus)return;const allowedStatuses=['검토중','재검토','영수 지급 검토중'];if(!allowedStatuses.includes(currentStatus)){lockApprovalPage('이미 처리된 영수 지급 승인 건입니다.');}}catch(error){console.error('Receipt approval status check error:',error);}}
 async function unlockPage(){document.getElementById('passwordScreen').style.display='none';document.getElementById('mainContent').style.display='block';try{applyReceiptData();}catch(error){console.error('applyReceiptData error:',error);}if(checkExpiration()){showExpired();return;}try{await checkCurrentApprovalStatus();}catch(error){console.error('checkCurrentApprovalStatus error:',error);}setTimeout(resizeSignatureCanvas,200);}
 function checkPassword(){const input=document.getElementById('passwordInput').value;if(input===ACCESS_PASSWORD){sessionStorage.setItem('rvdh_receipt_unlocked_'+receiptId,'true');unlockPage();}else{document.getElementById('passwordError').style.display='block';}}
 document.getElementById('passwordBtn').addEventListener('click',checkPassword);document.getElementById('passwordInput').addEventListener('keydown',function(e){if(e.key==='Enter')checkPassword();});window.addEventListener('load',function(){const passwordInput=document.getElementById('passwordInput');if(passwordInput)setTimeout(function(){passwordInput.focus();},300);});if(checkExpiration()){showExpired();}else{const unlocked=sessionStorage.getItem('rvdh_receipt_unlocked_'+receiptId);if(unlocked==='true')unlockPage();else document.getElementById('mainContent').style.display='none';}
