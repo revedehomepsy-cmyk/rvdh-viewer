@@ -1207,98 +1207,93 @@
     }
 
     async function sendReceiptWebhook(
-      status,
-      rejectReasonText = '',
-      signatureImage = '',
-      rejectProcessor = '',
-      approverName = ''
-    ){
-      if(checkExpiration()){
-        showExpired();
-        return;
-      }
+  status,
+  rejectReasonText = '',
+  signatureImage = '',
+  rejectProcessor = '',
+  approverName = ''
+){
+  if(checkExpiration()){
+    showExpired();
+    return;
+  }
 
-      if(
-        !RECEIPT_WEBHOOK_URL ||
-        RECEIPT_WEBHOOK_URL.includes('영수지급승인_WEBHOOK_URL')
-      ){
-        alert('영수 지급 승인 Webhook URL을 receipt.html 코드에 먼저 입력해주세요.');
-        return;
-      }
+  if(
+    !RECEIPT_WEBHOOK_URL ||
+    RECEIPT_WEBHOOK_URL.includes('영수지급승인_WEBHOOK_URL')
+  ){
+    alert('영수 지급 승인 Webhook URL을 receipt.html 코드에 먼저 입력해주세요.');
+    return;
+  }
 
-      const approveBtn = document.getElementById('approveBtn');
-      const rejectBtn = document.getElementById('rejectBtn');
+  const approveBtn = document.getElementById('approveBtn');
+  const rejectBtn = document.getElementById('rejectBtn');
 
-      approveBtn.disabled = true;
-      rejectBtn.disabled = true;
+  approveBtn.disabled = true;
+  rejectBtn.disabled = true;
 
-      try{
-        const formData = new FormData();
+  const formData = new FormData();
 
-        formData.append('type', 'receiptApproval');
-        formData.append('id', receiptId);
-        formData.append('token', receiptToken);
-        formData.append('notionItemId', notionItemId);
-        formData.append('status', status);
+  formData.append('type', 'receiptApproval');
+  formData.append('id', receiptId);
+  formData.append('token', receiptToken);
+  formData.append('notionItemId', notionItemId);
+  formData.append('status', status);
 
-        formData.append('companyName', companyName);
-        formData.append('requester', requester);
-        formData.append('siteCode', siteCode);
-        formData.append('siteAddress', siteAddress);
-        formData.append('detailDescription', detailDescription);
-        formData.append('processName', processName);
-        formData.append('detailItem', detailItem);
-        formData.append('amount', amount);
-        formData.append('expenseType', expenseType);
-        formData.append('consumerReason', consumerReason);
-        formData.append('taxProofStatus', taxProofStatus);
-        formData.append('memo', memo);
+  formData.append('companyName', companyName);
+  formData.append('requester', requester);
+  formData.append('siteCode', siteCode);
+  formData.append('siteAddress', siteAddress);
+  formData.append('detailDescription', detailDescription);
+  formData.append('processName', processName);
+  formData.append('detailItem', detailItem);
+  formData.append('amount', amount);
+  formData.append('expenseType', expenseType);
+  formData.append('consumerReason', consumerReason);
+  formData.append('taxProofStatus', taxProofStatus);
+  formData.append('memo', memo);
 
-        formData.append('order', orderViewer);
-        formData.append('statement', statementViewer);
-        formData.append('proof', proofViewer);
-        formData.append('extra', extraViewer);
+  formData.append('order', orderViewer);
+  formData.append('statement', statementViewer);
+  formData.append('proof', proofViewer);
+  formData.append('extra', extraViewer);
 
-        formData.append('approvalMemo', document.getElementById('comment').value);
-        formData.append('approverName', approverName);
-        formData.append('rejectReason', rejectReasonText);
-        formData.append('rejectProcessor', rejectProcessor);
-        formData.append('signatureImage', signatureImage);
-        formData.append(
-          'comment',
-          status === 'approved'
-            ? document.getElementById('comment').value
-            : rejectReasonText
-        );
-        formData.append('submittedAt', new Date().toISOString());
+  formData.append('approvalMemo', document.getElementById('comment').value);
+  formData.append('approverName', approverName);
+  formData.append('rejectReason', rejectReasonText);
+  formData.append('rejectProcessor', rejectProcessor);
+  formData.append('signatureImage', signatureImage);
+  formData.append(
+    'comment',
+    status === 'approved'
+      ? document.getElementById('comment').value
+      : rejectReasonText
+  );
+  formData.append('submittedAt', new Date().toISOString());
 
-        const response = await fetch(RECEIPT_WEBHOOK_URL, {
-          method:'POST',
-          body:formData
-        });
+  try{
+    await fetch(RECEIPT_WEBHOOK_URL, {
+      method:'POST',
+      body:formData,
+      mode:'no-cors'
+    });
 
-        const responseText = await response.text();
-
-        if(!response.ok){
-          console.error('Receipt webhook failed:', response.status, responseText);
-          throw new Error('Receipt webhook failed');
-        }
-
-        if(status === 'approved'){
-          document.getElementById('status').innerText = '승인 완료';
-          finishAndClosePage('영수 지급 승인이 완료되었습니다.');
-        }else{
-          document.getElementById('status').innerText = '반려';
-          finishAndClosePage('영수 지급 반려 처리가 완료되었습니다.');
-        }
-      }catch(error){
-        console.error(error);
-        alert('오류가 발생했습니다. 다시 시도해주세요.');
-
-        approveBtn.disabled = false;
-        rejectBtn.disabled = false;
-      }
+    if(status === 'approved'){
+      document.getElementById('status').innerText = '승인 완료';
+      finishAndClosePage('영수 지급 승인이 완료되었습니다.');
+    }else{
+      document.getElementById('status').innerText = '반려';
+      finishAndClosePage('영수 지급 반려 처리가 완료되었습니다.');
     }
+
+  }catch(error){
+    console.error(error);
+    alert('오류가 발생했습니다. 다시 시도해주세요.');
+
+    approveBtn.disabled = false;
+    rejectBtn.disabled = false;
+  }
+}
   </script>
 </body>
 </html>
