@@ -710,7 +710,7 @@
     const ACCESS_PASSWORD = '0723';
 
     const RECEIPT_WEBHOOK_URL = 'https://hook.eu1.make.com/s66wtengl28xe1qygo53psswiekmbgev';
-    const RECEIPT_STATUS_CHECK_WEBHOOK_URL = 'https://hook.eu1.make.com/영수지급상태조회_WEBHOOK_URL';
+    const RECEIPT_STATUS_CHECK_WEBHOOK_URL = 'https://hook.eu1.make.com/50sf7iit995gnnjyob0qs1etu5phdr77';
 
     const params = new URLSearchParams(window.location.search);
 
@@ -1076,6 +1076,26 @@
       showCompletedPage(message || '이미 처리된 영수 지급 승인 건입니다.');
     }
 
+    // ===== 같은 기기 재승인 방지(안전장치) =====
+    // 서버 상태조회가 느리거나 실패해도, 이 브라우저에서 한 번 처리한 건은 즉시 잠급니다.
+    function getLocalLockKey(){
+      return 'rvdh_receipt_processed_' + (receiptId || 'noid');
+    }
+
+    function isLocallyProcessed(){
+      try{
+        return localStorage.getItem(getLocalLockKey()) === 'true';
+      }catch(e){
+        return false;
+      }
+    }
+
+    function markLocallyProcessed(){
+      try{
+        localStorage.setItem(getLocalLockKey(), 'true');
+      }catch(e){}
+    }
+
     function finishAndClosePage(message){
       showCompletedPage(message || '처리가 완료되었습니다.');
 
@@ -1150,6 +1170,12 @@
 
       if(checkExpiration()){
         showExpired();
+        return;
+      }
+
+      // 이 기기에서 이미 처리한 건이면 즉시 잠금
+      if(isLocallyProcessed()){
+        lockApprovalPage('이미 처리된 영수 지급 승인 건입니다.');
         return;
       }
 
@@ -1449,6 +1475,9 @@
           console.error('Receipt webhook failed:', response.status, responseText);
           throw new Error('Receipt webhook failed');
         }
+
+        // 처리 성공 → 이 기기에서 재승인/재반려 즉시 차단
+        markLocallyProcessed();
 
         if(status === 'approved'){
           document.getElementById('status').innerText = '승인 완료';
