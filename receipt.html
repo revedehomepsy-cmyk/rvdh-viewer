@@ -10,7 +10,7 @@
 
   <style>
     body{
-      margin:0;   
+      margin:0;
       background:#3B2A1D;
       color:white;
       font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
@@ -710,7 +710,7 @@
     const ACCESS_PASSWORD = '0723';
 
     const RECEIPT_WEBHOOK_URL = 'https://hook.eu1.make.com/s66wtengl28xe1qygo53psswiekmbgev';
-    const RECEIPT_STATUS_CHECK_WEBHOOK_URL = 'https://hook.eu1.make.com/50sf7iit995gnnjyob0qs1etu5phdr77';
+    const RECEIPT_STATUS_CHECK_WEBHOOK_URL = 'https://hook.eu1.make.com/영수지급상태조회_WEBHOOK_URL';
 
     const params = new URLSearchParams(window.location.search);
 
@@ -763,60 +763,82 @@
       return cleanUrl;
     }
 
-    const receiptId = getParam('id', '');
-    const receiptToken = getParam('token', '');
-    const notionItemId = getParam('notionItemId', '');
+    function decodeViewerValue(value){
+      if(!value) return '';
 
-    let companyName = safeDecode(getParam('companyName') || getParam('company'), '-');
-    let requester = safeDecode(getParam('requester') || getParam('manager'), '-');
-    let siteCode = safeDecode(getParam('siteCode') || getParam('project'), '-');
-    let siteAddress = safeDecode(getParam('address') || getParam('siteAddress'), '-');
-    let detailDescription = safeDecode(getParam('detail') || getParam('description'), '-');
-    let processName = safeDecode(getParam('processName') || getParam('process'), '-');
-    let detailItem = safeDecode(getParam('detailItem') || getParam('subProcess'), '-');
-    let amount = safeDecode(getParam('amount'), '-');
-    let expenseType = safeDecode(getParam('expenseType') || getParam('costType'), '-');
-    let consumerReason = safeDecode(getParam('consumerReason') || getParam('reason'), '-');
-    let taxProofStatus = safeDecode(getParam('taxProofStatus') || getParam('taxProof'), '-');
-    let memo = safeDecode(getParam('memo') || getParam('note'), '-');
+      let result = String(value).trim();
+
+      for(let i = 0; i < 3; i++){
+        try{
+          const decoded = decodeURIComponent(result);
+          if(decoded === result) break;
+          result = decoded;
+        }catch(e){
+          break;
+        }
+      }
+
+      return result;
+    }
 
     function getViewerParam(names){
-  for(const name of names){
-    const value = getParam(name, '');
-    if(value){
-      return safeDecode(value, '');
+      for(const name of names){
+        const value = params.get(name);
+
+        if(value){
+          return sanitizeViewerUrl(value);
+        }
+      }
+
+      return '';
     }
-  }
 
-  return '';
-}
+    function isImageUrl(url){
+      const cleanUrl = sanitizeViewerUrl(url);
 
-const orderViewer = getViewerParam([
-  'order',
-  'orderViewerUrl',
-  'orderUrl',
-  'purchaseOrder',
-  'po'
-]);
+      if(!cleanUrl) return false;
 
-const statementViewer = getViewerParam([
-  'statement',
-  'spec',
-  'statementViewerUrl',
-  'specViewerUrl',
-  'statementUrl',
-  'estimateUrl'
-]);
-    const proofViewer = safeDecode(getParam('proof') || getParam('taxProofUrl'), '');
-    const extraViewer = safeDecode(getParam('extra') || getParam('attachment'), '');
-    const expires = safeDecode(getParam('expires'), '');
+      try{
+        const parsed = new URL(cleanUrl);
+        const pathname = parsed.pathname.toLowerCase();
+
+        return /\.(jpg|jpeg|png|webp|gif)$/i.test(pathname);
+      }catch(e){
+        const withoutQuery = cleanUrl.split('?')[0].toLowerCase();
+        return /\.(jpg|jpeg|png|webp|gif)$/i.test(withoutQuery);
+      }
+    }
+
+    function buildImageViewerUrl(imageUrl, watermarkName){
+      const viewerUrl = new URL('https://revedehomepsy-cmyk.github.io/rvdh-viewer/');
+
+      viewerUrl.searchParams.set('imgs', imageUrl);
+
+      if(watermarkName){
+        viewerUrl.searchParams.set('watermark', watermarkName);
+      }
+
+      return viewerUrl.toString();
+    }
+
+    function buildItemsViewerUrl(itemsValue, watermarkName){
+      const viewerUrl = new URL('https://revedehomepsy-cmyk.github.io/rvdh-viewer/');
+
+      viewerUrl.searchParams.set('items', itemsValue);
+
+      if(watermarkName){
+        viewerUrl.searchParams.set('watermark', watermarkName);
+      }
+
+      return viewerUrl.toString();
+    }
 
     function getWatermarkName(){
       return requester && requester !== '-' ? requester : '';
     }
 
     function addWatermarkToViewerUrl(url){
-      const cleanUrl = sanitizeViewerUrl(url);
+      let cleanUrl = sanitizeViewerUrl(url);
 
       if(!cleanUrl) return '';
 
@@ -824,13 +846,79 @@ const statementViewer = getViewerParam([
 
       if(!watermarkName) return cleanUrl;
 
-      if(cleanUrl.includes('watermark=')){
-        return cleanUrl;
+      cleanUrl = decodeViewerValue(cleanUrl);
+
+      try{
+        const parsed = new URL(cleanUrl);
+        const isRvdhViewer = parsed.hostname.includes('github.io') && parsed.pathname.includes('rvdh-viewer');
+
+        if(isRvdhViewer && parsed.searchParams.has('imgs')){
+          const imgsValue = parsed.searchParams.get('imgs') || '';
+
+          if(imgsValue){
+            parsed.searchParams.set('imgs', imgsValue);
+          }
+
+          parsed.searchParams.set('watermark', watermarkName);
+
+          return parsed.toString();
+        }
+
+        if(isRvdhViewer && parsed.searchParams.has('img')){
+          const imgValue = parsed.searchParams.get('img') || '';
+
+          if(imgValue){
+            parsed.searchParams.delete('img');
+            parsed.searchParams.set('imgs', imgValue);
+          }
+
+          parsed.searchParams.set('watermark', watermarkName);
+
+          return parsed.toString();
+        }
+
+        if(isRvdhViewer && parsed.searchParams.has('items')){
+          const itemsValue = parsed.searchParams.get('items') || '';
+          const decodedItems = decodeViewerValue(itemsValue);
+          const parts = decodedItems.split('|').map(item => item.trim()).filter(Boolean);
+
+          const imageUrls = parts.map(item => {
+            const separatorIndex = item.indexOf('::');
+            const rawUrl = separatorIndex > -1 ? item.slice(separatorIndex + 2).trim() : item;
+            const decodedUrl = decodeViewerValue(rawUrl);
+
+            return isImageUrl(decodedUrl) ? decodedUrl : '';
+          }).filter(Boolean);
+
+          if(imageUrls.length && imageUrls.length === parts.length){
+            return buildImageViewerUrl(imageUrls.join('|'), watermarkName);
+          }
+
+          parsed.searchParams.set('items', decodedItems || itemsValue);
+          parsed.searchParams.set('watermark', watermarkName);
+
+          return parsed.toString();
+        }
+
+        if(isImageUrl(cleanUrl)){
+          return buildImageViewerUrl(cleanUrl, watermarkName);
+        }
+
+        if(!parsed.searchParams.has('watermark')){
+          parsed.searchParams.set('watermark', watermarkName);
+        }
+
+        return parsed.toString();
+      }catch(e){
+        const decodedUrl = decodeViewerValue(cleanUrl);
+
+        if(isImageUrl(decodedUrl)){
+          return buildImageViewerUrl(decodedUrl, watermarkName);
+        }
+
+        const separator = cleanUrl.includes('?') ? '&' : '?';
+        return cleanUrl + separator + 'watermark=' + encodeURIComponent(watermarkName);
       }
-
-      const separator = cleanUrl.includes('?') ? '&' : '?';
-
-      return cleanUrl + separator + 'watermark=' + encodeURIComponent(watermarkName);
     }
 
     function setViewerButton(buttonId, url, emptyText, buttonText, useWatermark = true){
@@ -852,6 +940,59 @@ const statementViewer = getViewerParam([
       button.classList.add('disabled');
       button.innerText = emptyText;
     }
+
+    const receiptId = getParam('id', '');
+    const receiptToken = getParam('token', '');
+    const notionItemId = getParam('notionItemId', '');
+
+    let companyName = safeDecode(getParam('companyName') || getParam('company') || getParam('vendor'), '-');
+    let requester = safeDecode(getParam('requester') || getParam('manager'), '-');
+    let siteCode = safeDecode(getParam('siteCode') || getParam('project'), '-');
+    let siteAddress = safeDecode(getParam('address') || getParam('siteAddress'), '-');
+    let detailDescription = safeDecode(getParam('detail') || getParam('description'), '-');
+    let processName = safeDecode(getParam('processName') || getParam('process'), '-');
+    let detailItem = safeDecode(getParam('detailItem') || getParam('subProcess'), '-');
+    let amount = safeDecode(getParam('amount'), '-');
+    let expenseType = safeDecode(getParam('expenseType') || getParam('costType'), '-');
+    let consumerReason = safeDecode(getParam('consumerReason') || getParam('reason'), '-');
+    let taxProofStatus = safeDecode(getParam('taxProofStatus') || getParam('taxProof'), '-');
+    let memo = safeDecode(getParam('memo') || getParam('note'), '-');
+
+    const orderViewer = getViewerParam([
+      'order',
+      'orderViewerUrl',
+      'orderUrl',
+      'purchaseOrder',
+      'po'
+    ]);
+
+    const statementViewer = getViewerParam([
+      'statement',
+      'spec',
+      'statementViewerUrl',
+      'specViewerUrl',
+      'statementUrl',
+      'estimateUrl',
+      'detailStatement',
+      'detailEstimate'
+    ]);
+
+    const proofViewer = getViewerParam([
+      'proof',
+      'taxProofUrl',
+      'taxProof',
+      'receiptProof',
+      'evidence'
+    ]);
+
+    const extraViewer = getViewerParam([
+      'extra',
+      'attachment',
+      'extraViewerUrl',
+      'attachmentViewerUrl'
+    ]);
+
+    const expires = safeDecode(getParam('expires'), '');
 
     function applyReceiptData(){
       document.getElementById('companyName').innerText = companyName;
@@ -1232,93 +1373,98 @@ const statementViewer = getViewerParam([
     }
 
     async function sendReceiptWebhook(
-  status,
-  rejectReasonText = '',
-  signatureImage = '',
-  rejectProcessor = '',
-  approverName = ''
-){
-  if(checkExpiration()){
-    showExpired();
-    return;
-  }
+      status,
+      rejectReasonText = '',
+      signatureImage = '',
+      rejectProcessor = '',
+      approverName = ''
+    ){
+      if(checkExpiration()){
+        showExpired();
+        return;
+      }
 
-  if(
-    !RECEIPT_WEBHOOK_URL ||
-    RECEIPT_WEBHOOK_URL.includes('영수지급승인_WEBHOOK_URL')
-  ){
-    alert('영수 지급 승인 Webhook URL을 receipt.html 코드에 먼저 입력해주세요.');
-    return;
-  }
+      if(
+        !RECEIPT_WEBHOOK_URL ||
+        RECEIPT_WEBHOOK_URL.includes('영수지급승인_WEBHOOK_URL')
+      ){
+        alert('영수 지급 승인 Webhook URL을 receipt.html 코드에 먼저 입력해주세요.');
+        return;
+      }
 
-  const approveBtn = document.getElementById('approveBtn');
-  const rejectBtn = document.getElementById('rejectBtn');
+      const approveBtn = document.getElementById('approveBtn');
+      const rejectBtn = document.getElementById('rejectBtn');
 
-  approveBtn.disabled = true;
-  rejectBtn.disabled = true;
+      approveBtn.disabled = true;
+      rejectBtn.disabled = true;
 
-  const formData = new FormData();
+      try{
+        const formData = new FormData();
 
-  formData.append('type', 'receiptApproval');
-  formData.append('id', receiptId);
-  formData.append('token', receiptToken);
-  formData.append('notionItemId', notionItemId);
-  formData.append('status', status);
+        formData.append('type', 'receiptApproval');
+        formData.append('id', receiptId);
+        formData.append('token', receiptToken);
+        formData.append('notionItemId', notionItemId);
+        formData.append('status', status);
 
-  formData.append('companyName', companyName);
-  formData.append('requester', requester);
-  formData.append('siteCode', siteCode);
-  formData.append('siteAddress', siteAddress);
-  formData.append('detailDescription', detailDescription);
-  formData.append('processName', processName);
-  formData.append('detailItem', detailItem);
-  formData.append('amount', amount);
-  formData.append('expenseType', expenseType);
-  formData.append('consumerReason', consumerReason);
-  formData.append('taxProofStatus', taxProofStatus);
-  formData.append('memo', memo);
+        formData.append('companyName', companyName);
+        formData.append('requester', requester);
+        formData.append('siteCode', siteCode);
+        formData.append('siteAddress', siteAddress);
+        formData.append('detailDescription', detailDescription);
+        formData.append('processName', processName);
+        formData.append('detailItem', detailItem);
+        formData.append('amount', amount);
+        formData.append('expenseType', expenseType);
+        formData.append('consumerReason', consumerReason);
+        formData.append('taxProofStatus', taxProofStatus);
+        formData.append('memo', memo);
 
-  formData.append('order', orderViewer);
-  formData.append('statement', statementViewer);
-  formData.append('proof', proofViewer);
-  formData.append('extra', extraViewer);
+        formData.append('order', orderViewer);
+        formData.append('statement', statementViewer);
+        formData.append('proof', proofViewer);
+        formData.append('extra', extraViewer);
 
-  formData.append('approvalMemo', document.getElementById('comment').value);
-  formData.append('approverName', approverName);
-  formData.append('rejectReason', rejectReasonText);
-  formData.append('rejectProcessor', rejectProcessor);
-  formData.append('signatureImage', signatureImage);
-  formData.append(
-    'comment',
-    status === 'approved'
-      ? document.getElementById('comment').value
-      : rejectReasonText
-  );
-  formData.append('submittedAt', new Date().toISOString());
+        formData.append('approvalMemo', document.getElementById('comment').value);
+        formData.append('approverName', approverName);
+        formData.append('rejectReason', rejectReasonText);
+        formData.append('rejectProcessor', rejectProcessor);
+        formData.append('signatureImage', signatureImage);
+        formData.append(
+          'comment',
+          status === 'approved'
+            ? document.getElementById('comment').value
+            : rejectReasonText
+        );
+        formData.append('submittedAt', new Date().toISOString());
 
-  try{
-    await fetch(RECEIPT_WEBHOOK_URL, {
-      method:'POST',
-      body:formData,
-      mode:'no-cors'
-    });
+        const response = await fetch(RECEIPT_WEBHOOK_URL, {
+          method:'POST',
+          body:formData
+        });
 
-    if(status === 'approved'){
-      document.getElementById('status').innerText = '승인 완료';
-      finishAndClosePage('영수 지급 승인이 완료되었습니다.');
-    }else{
-      document.getElementById('status').innerText = '반려';
-      finishAndClosePage('영수 지급 반려 처리가 완료되었습니다.');
+        const responseText = await response.text();
+
+        if(!response.ok){
+          console.error('Receipt webhook failed:', response.status, responseText);
+          throw new Error('Receipt webhook failed');
+        }
+
+        if(status === 'approved'){
+          document.getElementById('status').innerText = '승인 완료';
+          finishAndClosePage('영수 지급 승인이 완료되었습니다.');
+        }else{
+          document.getElementById('status').innerText = '반려';
+          finishAndClosePage('영수 지급 반려 처리가 완료되었습니다.');
+        }
+      }catch(error){
+        console.error(error);
+        alert('오류가 발생했습니다. 다시 시도해주세요.');
+
+        approveBtn.disabled = false;
+        rejectBtn.disabled = false;
+      }
     }
-
-  }catch(error){
-    console.error(error);
-    alert('오류가 발생했습니다. 다시 시도해주세요.');
-
-    approveBtn.disabled = false;
-    rejectBtn.disabled = false;
-  }
-}
   </script>
 </body>
 </html>
