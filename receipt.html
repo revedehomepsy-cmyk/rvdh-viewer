@@ -780,8 +780,33 @@
     let taxProofStatus = safeDecode(getParam('taxProofStatus') || getParam('taxProof'), '-');
     let memo = safeDecode(getParam('memo') || getParam('note'), '-');
 
-    const orderViewer = safeDecode(getParam('order'), '');
-    const statementViewer = safeDecode(getParam('statement') || getParam('spec'), '');
+    function getViewerParam(names){
+  for(const name of names){
+    const value = getParam(name, '');
+    if(value){
+      return safeDecode(value, '');
+    }
+  }
+
+  return '';
+}
+
+const orderViewer = getViewerParam([
+  'order',
+  'orderViewerUrl',
+  'orderUrl',
+  'purchaseOrder',
+  'po'
+]);
+
+const statementViewer = getViewerParam([
+  'statement',
+  'spec',
+  'statementViewerUrl',
+  'specViewerUrl',
+  'statementUrl',
+  'estimateUrl'
+]);
     const proofViewer = safeDecode(getParam('proof') || getParam('taxProofUrl'), '');
     const extraViewer = safeDecode(getParam('extra') || getParam('attachment'), '');
     const expires = safeDecode(getParam('expires'), '');
