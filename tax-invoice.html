@@ -94,12 +94,11 @@
     .listItem{
       display:flex;
       align-items:center;
-      justify-content:space-between;
       gap:14px;
       background:#2F2118;
       border:1px solid rgba(255,255,255,.12);
       border-radius:20px;
-      padding:18px 20px;
+      padding:16px 20px;
       margin-bottom:12px;
       cursor:pointer;
       transition:.15s;
@@ -110,33 +109,53 @@
       transform:translateY(-1px);
     }
 
-    .listItemMain{
+    .listItemLeft{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex:1;
       min-width:0;
     }
 
-    .listItemVendor{
-      font-size:17px;
-      font-weight:700;
-      line-height:1.4;
-      word-break:keep-all;
-    }
-
-    .listItemSub{
-      font-size:13px;
-      color:rgba(255,255,255,.55);
-      margin-top:6px;
-    }
-
-    .listItemAmount{
-      font-size:18px;
+    .liVendor{
+      font-size:16px;
       font-weight:700;
       white-space:nowrap;
-      text-align:right;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
 
-    .listItemArrow{
-      color:rgba(255,255,255,.4);
-      font-size:20px;
+    .liDivider{
+      color:rgba(255,255,255,.3);
+      flex-shrink:0;
+    }
+
+    .liAmount{
+      font-size:16px;
+      font-weight:700;
+      white-space:nowrap;
+      flex-shrink:0;
+    }
+
+    .liRequester{
+      font-size:14px;
+      color:rgba(255,255,255,.6);
+      white-space:nowrap;
+      text-align:right;
+      flex-shrink:0;
+    }
+
+    .proofBtn{
+      height:40px;
+      padding:0 16px;
+      border-radius:14px;
+      background:white;
+      color:#2F2118;
+      font-size:14px;
+      font-weight:700;
+      border:none;
+      cursor:pointer;
+      white-space:nowrap;
       flex-shrink:0;
     }
 
@@ -340,6 +359,11 @@
       .infoFull{ grid-column:auto; }
       .amount{ font-size:26px; }
       .card{ padding:24px; border-radius:24px; }
+
+      /* 모바일: 한 줄이 좁으면 줄바꿈 — 1줄 업체명|금액, 2줄 발주자+증빙하기 */
+      .listItem{ flex-wrap:wrap; }
+      .listItemLeft{ flex:1 1 100%; }
+      .liRequester{ flex:1; text-align:left; }
     }
   </style>
 </head>
@@ -366,7 +390,7 @@
       <div>
         <img src="./logo_white.svg" class="logo" alt="RVDH Logo">
         <div class="logoSubText">Tax Invoice Issuance</div>
-        <div class="stepBadge">계산서 발급 관리 · v4</div>
+        <div class="stepBadge">계산서 발급 관리 · v5</div>
       </div>
     </div>
 
@@ -603,16 +627,17 @@
         const el = document.createElement('div');
         el.className = 'listItem';
         el.innerHTML =
-          '<div class="listItemMain">' +
-            '<div class="listItemVendor"></div>' +
-            '<div class="listItemSub"></div>' +
+          '<div class="listItemLeft">' +
+            '<span class="liVendor"></span>' +
+            '<span class="liDivider">|</span>' +
+            '<span class="liAmount"></span>' +
           '</div>' +
-          '<div class="listItemAmount"></div>' +
-          '<div class="listItemArrow">›</div>';
+          '<div class="liRequester"></div>' +
+          '<button type="button" class="proofBtn">증빙하기</button>';
 
-        el.querySelector('.listItemVendor').innerText = item.vendor || '-';
-        el.querySelector('.listItemSub').innerText = '발주자 ' + (item.requester || '-');
-        el.querySelector('.listItemAmount').innerText = formatAmount(item.amount);
+        el.querySelector('.liVendor').innerText = item.vendor || '-';
+        el.querySelector('.liAmount').innerText = formatAmount(item.amount);
+        el.querySelector('.liRequester').innerText = '발주자 ' + (item.requester || '-');
 
         el.addEventListener('click', function(){ openDetail(index); });
         container.appendChild(el);
