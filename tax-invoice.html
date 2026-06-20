@@ -159,6 +159,24 @@
       flex-shrink:0;
     }
 
+    .searchInput{
+      width:100%;
+      height:50px;
+      box-sizing:border-box;
+      margin-bottom:16px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.16);
+      background:#2F2118;
+      color:white;
+      padding:0 16px;
+      font-size:15px;
+      outline:none;
+    }
+
+    .searchInput::placeholder{
+      color:rgba(255,255,255,.4);
+    }
+
     .stateText{
       color:rgba(255,255,255,.6);
       font-size:15px;
@@ -390,7 +408,7 @@
       <div>
         <img src="./logo_white.svg" class="logo" alt="RVDH Logo">
         <div class="logoSubText">Tax Invoice Issuance</div>
-        <div class="stepBadge">계산서 발급 관리 · v5</div>
+        <div class="stepBadge">계산서 발급 관리 · v7</div>
       </div>
     </div>
 
@@ -403,6 +421,14 @@
         <div class="sectionDesc">
           계산서 발급여부가 “미발급(확인필요)”인 건입니다. 항목을 누르면 상세 정보와 첨부 화면이 열립니다.
         </div>
+
+        <input
+          type="text"
+          id="searchInput"
+          class="searchInput"
+          placeholder="🔍 발주자 이름으로 검색"
+          autocomplete="off"
+        >
 
         <div id="listContainer">
           <div class="stateText" id="listLoading">목록을 불러오는 중입니다…</div>
@@ -425,6 +451,10 @@
           <div>
             <div class="label">발주자</div>
             <div class="value" id="dRequester">-</div>
+          </div>
+          <div>
+            <div class="label">청구날짜</div>
+            <div class="value" id="dBillDate">-</div>
           </div>
           <div class="infoFull">
             <div class="label">업체명</div>
@@ -502,8 +532,24 @@
         amount:    pick(raw, ['amount','청구금액','price','금액'], ''),
         requester: pick(raw, ['requester','발주자','manager','orderer'], '-'),
         detail:    pick(raw, ['detail','내역','description','desc'], '-'),
-        notionId:  pick(raw, ['notionId','pageId','notion_page_id','notionItemId'], '')
+        notionId:  pick(raw, ['notionId','pageId','notion_page_id','notionItemId'], ''),
+        billDate:  pick(raw, ['billDate','청구날짜','billdate','date','청구일'], '')
       };
+    }
+
+    // 날짜 표시용: ISO/날짜 문자열 → YYYY-MM-DD (시간 제거)
+    function formatDate(value){
+      if(!value) return '-';
+      const s = String(value).trim();
+      const d = new Date(s);
+      if(!isNaN(d.getTime())){
+        const y = d.getFullYear();
+        const m = String(d.getMonth()+1).padStart(2,'0');
+        const day = String(d.getDate()).padStart(2,'0');
+        return y + '-' + m + '-' + day;
+      }
+      // 파싱 안 되면 앞 10글자(YYYY-MM-DD)만이라도
+      return s.slice(0,10) || '-';
     }
 
     let currentItems = [];
@@ -594,7 +640,7 @@
     // 값 안에 따옴표/콤마/줄바꿈이 있어도 안전하게 읽음.
     function parseByKnownKeys(text){
       const items = [];
-      const re = /"id":"([\s\S]*?)","vendor":"([\s\S]*?)","amount":"([\s\S]*?)","requester":"([\s\S]*?)","detail":"([\s\S]*?)","notionId":"([\s\S]*?)"\s*\}/g;
+      const re = /"id":"([\s\S]*?)","vendor":"([\s\S]*?)","amount":"([\s\S]*?)","requester":"([\s\S]*?)","detail":"([\s\S]*?)","notionId":"([\s\S]*?)"(?:,"billDate":"([\s\S]*?)")?\s*\}/g;
       let m;
       while((m = re.exec(text)) !== null){
         items.push({
@@ -603,7 +649,8 @@
           amount: m[3],
           requester: m[4],
           detail: m[5],
-          notionId: m[6]
+          notionId: m[6],
+          billDate: m[7] || ''
         });
       }
       return items;
@@ -612,6 +659,8 @@
     function renderList(){
       const container = document.getElementById('listContainer');
       const countBadge = document.getElementById('countBadge');
+      const searchEl = document.getElementById('searchInput');
+      const term = (searchEl ? searchEl.value : '').trim().toLowerCase();
 
       if(!currentItems.length){
         countBadge.style.display = 'none';
@@ -619,11 +668,23 @@
         return;
       }
 
+      // 발주자 이름으로 필터
+      const filtered = term
+        ? currentItems.filter(function(it){
+            return String(it.requester || '').toLowerCase().includes(term);
+          })
+        : currentItems;
+
       countBadge.style.display = 'inline-flex';
-      countBadge.innerText = currentItems.length;
+      countBadge.innerText = filtered.length;
+
+      if(!filtered.length){
+        container.innerHTML = '<div class="stateText">“' + term + '” 발주자 검색 결과가 없습니다.</div>';
+        return;
+      }
 
       container.innerHTML = '';
-      currentItems.forEach(function(item, index){
+      filtered.forEach(function(item){
         const el = document.createElement('div');
         el.className = 'listItem';
         el.innerHTML =
@@ -639,18 +700,19 @@
         el.querySelector('.liAmount').innerText = formatAmount(item.amount);
         el.querySelector('.liRequester').innerText = '발주자 ' + (item.requester || '-');
 
-        el.addEventListener('click', function(){ openDetail(index); });
+        el.addEventListener('click', function(){ openDetail(item); });
         container.appendChild(el);
       });
     }
 
     /* ---------- 상세 ---------- */
-    function openDetail(index){
-      selectedItem = currentItems[index];
+    function openDetail(item){
+      selectedItem = item;
 
       document.getElementById('dID').innerText        = selectedItem.id || '-';
       document.getElementById('dVendor').innerText    = selectedItem.vendor || '-';
       document.getElementById('dRequester').innerText = selectedItem.requester || '-';
+      document.getElementById('dBillDate').innerText  = formatDate(selectedItem.billDate);
       document.getElementById('dDetail').innerText    = selectedItem.detail || '-';
       document.getElementById('dAmount').innerText    = formatAmount(selectedItem.amount);
 
@@ -753,6 +815,7 @@
     });
 
     document.getElementById('refreshBtn').addEventListener('click', loadList);
+    document.getElementById('searchInput').addEventListener('input', renderList);
     document.getElementById('backBtn').addEventListener('click', backToList);
     document.getElementById('submitBtn').addEventListener('click', submitProof);
 
