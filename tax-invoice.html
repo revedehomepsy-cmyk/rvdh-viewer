@@ -408,7 +408,7 @@
       <div>
         <img src="./logo_white.svg" class="logo" alt="RVDH Logo">
         <div class="logoSubText">Tax Invoice Issuance</div>
-        <div class="stepBadge">계산서 발급 관리 · v8</div>
+        <div class="stepBadge">계산서 발급 관리 · v10</div>
       </div>
     </div>
 
@@ -546,6 +546,45 @@
       }
       // 파싱 안 되면 앞 10글자(YYYY-MM-DD)만이라도
       return s.slice(0,10) || '-';
+    }
+
+    // 청구날짜 → YYYYMMDD (없으면 오늘)
+    function compactDate(value){
+      const f = formatDate(value);
+      if(f && f !== '-') return f.replace(/-/g, '');
+      const d = new Date();
+      return '' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+    }
+
+    // 파일명 금지문자 제거 + 정리
+    function sanitizeForFilename(s){
+      return String(s == null ? '' : s)
+        .replace(/[\/\\:*?"<>|]/g, '')   // 윈도우/OneDrive 금지문자
+        .replace(/[\r\n\t]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function getExt(name){
+      const m = String(name || '').match(/\.([A-Za-z0-9]+)$/);
+      return m ? m[1].toLowerCase() : '';
+    }
+
+    // YYYYMMDD_업체명_금액_내역_발주자.확장자
+    function buildFileName(item, originalName){
+      const dateStr = compactDate(item.billDate);
+      const vendor = sanitizeForFilename(item.vendor);
+      const amount = String(item.amount || '').replace(/[^\d]/g, '');   // 숫자만
+      const detail = sanitizeForFilename(item.detail).slice(0, 40);     // 너무 길면 자름
+      const requester = sanitizeForFilename(item.requester);
+      const ext = getExt(originalName);
+
+      let base = [dateStr, vendor, amount, detail, requester]
+        .filter(function(v){ return v !== ''; })
+        .join('_');
+
+      if(!base) base = 'file';
+      return ext ? (base + '.' + ext) : base;
     }
 
     let currentItems = [];
@@ -748,6 +787,9 @@
         return;
       }
 
+      // 파일명 조립: YYYYMMDD_업체명_금액_내역_발주자.확장자
+      const newFileName = buildFileName(selectedItem, file.name);
+
       const formData = new FormData();
       formData.append('type', 'taxInvoiceSubmit');
       formData.append('id', selectedItem.id);
@@ -755,7 +797,10 @@
       formData.append('vendor', selectedItem.vendor);
       formData.append('amount', String(selectedItem.amount));
       formData.append('requester', selectedItem.requester);
-      formData.append('fileName', file.name);
+      formData.append('detail', selectedItem.detail || '');
+      formData.append('billDate', selectedItem.billDate || '');
+      formData.append('fileName', newFileName);          // 조립된 새 파일명
+      formData.append('originalFileName', file.name);     // 원본 파일명(참고용)
       formData.append('fileSize', String(file.size));
       formData.append('submittedAt', new Date().toISOString());
       formData.append('file', file);
