@@ -366,7 +366,7 @@
       <div>
         <img src="./logo_white.svg" class="logo" alt="RVDH Logo">
         <div class="logoSubText">Tax Invoice Issuance</div>
-        <div class="stepBadge">계산서 발급 관리</div>
+        <div class="stepBadge">계산서 발급 관리 · v3</div>
       </div>
     </div>
 
@@ -539,14 +539,18 @@
       }
     }
 
-    // 깨진 JSON도 최대한 복구해서 파싱 (콤마 누락 }{ → },{ 등)
+    // 깨진 JSON도 최대한 복구해서 파싱 (콤마 누락 }{, 줄바꿈 등)
     function parseLooseJson(text){
       let t = String(text).trim();
 
       try{ return JSON.parse(t); }catch(e){}
 
+      // 문자열 내부 줄바꿈/탭 → 공백 (내역에 줄바꿈이 있으면 JSON이 깨짐)
+      let cleaned = t.replace(/[\r\n\t]+/g, ' ');
+      try{ return JSON.parse(cleaned); }catch(e){}
+
       // 객체 사이 콤마 누락 복구:  }{  →  },{
-      let repaired = t.replace(/\}\s*\{/g, '},{');
+      let repaired = cleaned.replace(/\}\s*\{/g, '},{');
       try{ return JSON.parse(repaired); }catch(e){}
 
       // items 배열만 들어온 경우 등 한 번 더 시도
