@@ -497,6 +497,7 @@
         return;
       }
 
+      let rawText = '';
       try{
         const response = await fetch(LIST_WEBHOOK_URL, {
           method:'POST',
@@ -505,16 +506,20 @@
         });
 
         // 원문 텍스트를 먼저 받아서 디버깅 + 깨진 JSON 복구
-        const rawText = await response.text();
+        rawText = await response.text();
         console.log('[목록 웹훅 status]', response.status);
         console.log('[목록 웹훅 응답 원문]', rawText);
 
         if(!response.ok){
-          throw new Error('list webhook failed: ' + response.status + ' / ' + rawText.slice(0,200));
+          throw new Error('웹훅 오류 status ' + response.status);
         }
 
         if(!rawText || !rawText.trim()){
-          throw new Error('빈 응답 (시나리오가 켜져 있는지 확인하세요)');
+          throw new Error('빈 응답 — 시나리오가 켜져 있는지 확인하세요');
+        }
+
+        if(rawText.trim() === 'Accepted'){
+          throw new Error('Accepted 응답 — Make 시나리오가 꺼져 있습니다. 좌측 하단 토글을 ON 하세요');
         }
 
         let data = parseLooseJson(rawText);
@@ -525,11 +530,12 @@
 
         renderList();
       }catch(error){
-        console.error('[목록 불러오기 실패]', error);
+        console.error('[목록 불러오기 실패]', error, '원문:', rawText);
+        const snippet = rawText ? rawText.slice(0,160) : '(빈 응답)';
         container.innerHTML =
           '<div class="stateText">목록을 불러오지 못했습니다.<br>' +
-          '<span style="font-size:12px;opacity:.7;">(' + (error.message || error) + ')</span><br>' +
-          '잠시 후 새로고침해주세요.</div>';
+          '<span style="font-size:12px;opacity:.7;">원인: ' + (error.message || error) + '</span><br>' +
+          '<span style="font-size:11px;opacity:.55;display:block;margin-top:8px;word-break:break-all;">응답: ' + snippet + '</span></div>';
       }
     }
 
