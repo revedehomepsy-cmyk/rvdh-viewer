@@ -1320,6 +1320,25 @@ function populateProjectSelect(){
   });
 }
 
+function parseProjectResponse(text){
+  let t = String(text || '').replace(/^﻿/, '').trim();
+
+  if(!t) return [];
+
+  try{ return JSON.parse(t); }catch(e){}
+
+  const cleaned = t.replace(/[\r\n\t]+/g, ' ');
+  try{ return JSON.parse(cleaned); }catch(e){}
+
+  const repaired = cleaned.replace(/\}\s*\{/g, '},{');
+  try{ return JSON.parse(repaired); }catch(e){}
+
+  try{ return JSON.parse('[' + repaired + ']'); }catch(e){}
+
+  console.error('프로젝트 응답 파싱 실패, 원문:', t.slice(0, 200));
+  return [];
+}
+
 async function fetchProjectList(){
   if(projectListLoaded || projectListLoading) return;
 
@@ -1341,7 +1360,8 @@ async function fetchProjectList(){
       throw new Error('Project list webhook failed: ' + response.status);
     }
 
-    const data = await response.json();
+    const rawText = await response.text();
+    const data = parseProjectResponse(rawText);
     const rawList = Array.isArray(data) ? data : (data.projects || data.results || []);
 
     projectList = rawList
