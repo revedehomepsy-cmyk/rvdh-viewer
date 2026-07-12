@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; base-uri 'none'; object-src 'none'; form-action 'self'">
 <title>RVDH Viewer</title>
 
 <style>
@@ -188,12 +189,44 @@ function renderEmpty(){
   content.innerHTML = '<div class="empty">표시할 문서가 없습니다.</div>';
 }
 
+const ALLOWED_HOST_SUFFIXES = [
+  'amazonaws.com',
+  'notion.so',
+  'notion.site',
+  'notion-static.com',
+  'sharepoint.com',
+  '1drv.ms',
+  'github.io',
+  'make.com'
+];
+
+function isSafeHttpUrl(rawUrl){
+  try{
+    const parsed = new URL(rawUrl);
+
+    if(parsed.protocol !== 'https:') return false;
+
+    const host = parsed.hostname.toLowerCase();
+
+    return ALLOWED_HOST_SUFFIXES.some(function(suffix){
+      return host === suffix || host.endsWith('.' + suffix);
+    });
+  }catch(e){
+    return false;
+  }
+}
+
 function sanitizeUrl(url){
   const cleanUrl = decodeSafe(url || '').trim();
 
   if(!cleanUrl) return '';
 
   if(cleanUrl === '[object Object]' || cleanUrl.includes('[object Object]')){
+    return '';
+  }
+
+  if(!isSafeHttpUrl(cleanUrl)){
+    console.warn('차단된 URL(비허용 프로토콜/도메인):', cleanUrl);
     return '';
   }
 

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src https://hook.eu1.make.com; base-uri 'none'; object-src 'none'; form-action 'self'">
   <title>RVDH 계산서 발급 관리</title>
 
   <link rel="icon" type="image/png" href="./favicon.png">
@@ -614,7 +615,13 @@
        1) LIST_WEBHOOK_URL  : 미발급(확인필요) 목록을 돌려주는 웹훅
        2) SUBMIT_WEBHOOK_URL: 첨부 제출 → 노션 상태변경 + 파일업로드 웹훅
        ========================================================= */
-    const ACCESS_PASSWORD = '0723';
+    const ACCESS_PASSWORD_HASH = '41177165eddb7d6d754a4f8e6f9758cf06f052c1b2448bd9b5e5e292ce38ea74';
+
+    async function sha256Hex(text){
+      const data = new TextEncoder().encode(text);
+      const digest = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
 
     const LIST_WEBHOOK_URL   = 'https://hook.eu1.make.com/73zjq3dminwvb4yk9y8ltj9j43lt293r';
     const SUBMIT_WEBHOOK_URL = 'https://hook.eu1.make.com/8uvmh9oifw1j2epn06nqbhoc51d6pcht';
@@ -759,10 +766,21 @@
       }catch(error){
         console.error('[목록 불러오기 실패]', error, '원문:', rawText);
         const snippet = rawText ? rawText.slice(0,160) : '(빈 응답)';
-        container.innerHTML =
-          '<div class="stateText">목록을 불러오지 못했습니다.<br>' +
-          '<span style="font-size:12px;opacity:.7;">원인: ' + (error.message || error) + '</span><br>' +
-          '<span style="font-size:11px;opacity:.55;display:block;margin-top:8px;word-break:break-all;">응답: ' + snippet + '</span></div>';
+        container.innerHTML = '';
+        const errBox = document.createElement('div');
+        errBox.className = 'stateText';
+        const errLine1 = document.createElement('div');
+        errLine1.textContent = '목록을 불러오지 못했습니다.';
+        const errLine2 = document.createElement('span');
+        errLine2.style.cssText = 'font-size:12px;opacity:.7;display:block;';
+        errLine2.textContent = '원인: ' + (error.message || error);
+        const errLine3 = document.createElement('span');
+        errLine3.style.cssText = 'font-size:11px;opacity:.55;display:block;margin-top:8px;word-break:break-all;';
+        errLine3.textContent = '응답: ' + snippet;
+        errBox.appendChild(errLine1);
+        errBox.appendChild(errLine2);
+        errBox.appendChild(errLine3);
+        container.appendChild(errBox);
       }
     }
 
@@ -829,7 +847,11 @@
       countBadge.innerText = filtered.length;
 
       if(!filtered.length){
-        container.innerHTML = '<div class="stateText">“' + term + '” 발주자 검색 결과가 없습니다.</div>';
+        container.innerHTML = '';
+        const noRes = document.createElement('div');
+        noRes.className = 'stateText';
+        noRes.textContent = '“' + term + '” 발주자 검색 결과가 없습니다.';
+        container.appendChild(noRes);
         return;
       }
 
@@ -1034,9 +1056,18 @@
       loadList();
     }
 
-    function checkPassword(){
+    async function checkPassword(){
       const input = document.getElementById('passwordInput').value;
-      if(input === ACCESS_PASSWORD){
+
+      let inputHash = '';
+
+      try{
+        inputHash = await sha256Hex(input);
+      }catch(e){
+        console.error('해시 계산 실패:', e);
+      }
+
+      if(inputHash === ACCESS_PASSWORD_HASH){
         sessionStorage.setItem('rvdh_taxinvoice_unlocked', 'true');
         unlockPage();
       }else{

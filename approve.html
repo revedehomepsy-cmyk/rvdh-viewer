@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src https://hook.eu1.make.com; base-uri 'none'; object-src 'none'; form-action 'self'">
 <title>RVDH Approval</title>
 
 <link rel="icon" type="image/png" href="./favicon.png">
@@ -253,6 +254,28 @@ button:disabled{
 
 .choiceBox input{
   accent-color:white;
+}
+
+.starRow{
+  display:flex;
+  gap:4px;
+  margin-top:12px;
+}
+
+.starBtn{
+  background:none;
+  border:none;
+  height:auto;
+  padding:2px 4px;
+  font-size:38px;
+  line-height:1;
+  color:rgba(255,255,255,.22);
+  cursor:pointer;
+  transition:.15s;
+}
+
+.starBtn.active{
+  color:#F5C242;
 }
 
 .conditionalBlock{
@@ -647,6 +670,11 @@ button:disabled{
       </div>
 
       <div>
+        <div class="label">프로젝트명</div>
+        <div class="value" id="projectNameValue">-</div>
+      </div>
+
+      <div>
         <div class="label">현장 주소</div>
         <div class="value" id="siteAddress">-</div>
       </div>
@@ -792,16 +820,7 @@ button:disabled{
   </div>
 
   <div class="card">
-    <div class="label" id="commentLabel">
-      승인 메모
-    </div>
-
-    <textarea
-      id="comment"
-      placeholder="승인 시 참고할 메모가 있다면 입력해주세요."
-    ></textarea>
-
-    <div class="actionGrid">
+    <div class="actionGrid" style="margin-top:0;">
       <button class="approve" id="approveBtn">
         승인하기
       </button>
@@ -829,7 +848,17 @@ button:disabled{
     </div>
 
     <div id="approvalRequiredInfoBlock" style="display:none; margin-top:18px;">
-      <div class="label">현장코드 확인</div>
+      <div class="label">프로젝트 선택</div>
+
+      <select id="projectSelect" class="textInput">
+        <option value="">프로젝트 목록을 불러오는 중입니다...</option>
+      </select>
+
+      <div class="noticeText">
+        * 프로젝트를 선택하면 프로젝트명 앞의 숫자(_ 이전)가 현장코드에 자동 입력됩니다. 목록에 없으면 아래에 직접 입력해주세요.
+      </div>
+
+      <div class="label" style="margin-top:18px;">현장코드 확인</div>
 
       <input
         id="siteCodeConfirmInput"
@@ -882,6 +911,22 @@ button:disabled{
         </select>
       </div>
 
+      <div style="margin-top:18px;">
+        <div class="label">업체 평점</div>
+
+        <div class="starRow" id="vendorStarRow">
+          <button type="button" class="starBtn" data-star="1">★</button>
+          <button type="button" class="starBtn" data-star="2">★</button>
+          <button type="button" class="starBtn" data-star="3">★</button>
+          <button type="button" class="starBtn" data-star="4">★</button>
+          <button type="button" class="starBtn" data-star="5">★</button>
+        </div>
+
+        <div class="noticeText">
+          * 이번 청구 건에 대한 업체 평가를 별점(1~5)으로 선택해주세요.
+        </div>
+      </div>
+
       <div class="errorText" id="approvalRequiredInfoError">
         현장코드, 공정, 세부항목을 모두 입력해주세요.
       </div>
@@ -906,6 +951,15 @@ button:disabled{
       </div>
     </div>
 
+
+    <div style="margin-top:18px;">
+      <div class="label" id="commentLabel">승인 메모</div>
+
+      <textarea
+        id="comment"
+        placeholder="승인 시 참고할 메모가 있다면 입력해주세요."
+      ></textarea>
+    </div>
 
     <div class="signatureBox">
       <div class="signatureLabel">
@@ -1030,7 +1084,13 @@ button:disabled{
 </div>
 
 <script>
-const ACCESS_PASSWORD = '0723';
+const ACCESS_PASSWORD_HASH = '41177165eddb7d6d754a4f8e6f9758cf06f052c1b2448bd9b5e5e292ce38ea74';
+
+async function sha256Hex(text){
+  const data = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/jw3fp3v0cbkq624x9skdn19qgedtqi97';
 
@@ -1039,6 +1099,12 @@ const REASSIGN_WEBHOOK_URL = MAKE_WEBHOOK_URL;
 const STATUS_CHECK_WEBHOOK_URL = 'https://hook.eu1.make.com/50sf7iit995gnnjyob0qs1etu5phdr77';
 
 const FINAL_ESTIMATE_UPLOAD_WEBHOOK_URL = 'https://hook.eu1.make.com/최종견적서업로드_WEBHOOK_URL';
+
+// Notion "Project db" 프로젝트 목록을 반환하는 Make 웹훅 URL.
+// Make 시나리오에서 Notion Search/Query 모듈로 Project db를 조회한 뒤
+// 아래와 같은 JSON 배열(또는 {projects:[...]})로 응답하도록 구성해주세요.
+// 예: [{ "코드": 89, "프로젝트명": "89_동대문2_34평", "주소": "...", "등록상태": "등록완료" }, ...]
+const PROJECT_LIST_WEBHOOK_URL = 'https://hook.eu1.make.com/vzewulty79rqd6u11i0h285rao6ei1xj';
 
 const DETAIL_ITEMS_BY_PROCESS = {
   '가설공사': [
@@ -1200,6 +1266,166 @@ function updateDetailItemOptions(processName){
   });
 }
 
+let projectList = [];
+let projectListLoaded = false;
+let projectListLoading = false;
+
+function extractSiteCodeFromProjectName(projectName){
+  if(!projectName) return '';
+
+  const beforeUnderscore = String(projectName).split('_')[0];
+  const digitsOnly = beforeUnderscore.replace(/[^0-9]/g, '');
+
+  return digitsOnly;
+}
+
+function normalizeProjectItem(item){
+  if(!item || typeof item !== 'object') return null;
+
+  const registerStatus = String(item['등록상태'] || item.registerStatus || item.status || '').trim();
+
+  if(registerStatus === '취소됨') return null;
+
+  const name = item['프로젝트명'] || item.name || item.projectName || item.title || '';
+  const rawCode = item['코드'] ?? item.code ?? item.siteCode ?? '';
+  const address = item['주소'] || item.address || '';
+
+  if(!name) return null;
+
+  const code = String(rawCode).trim() || extractSiteCodeFromProjectName(name);
+
+  return { name: String(name).trim(), code: code, address: String(address).trim() };
+}
+
+function populateProjectSelect(){
+  const projectSelect = document.getElementById('projectSelect');
+
+  if(!projectSelect) return;
+
+  projectSelect.innerHTML = '';
+
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.textContent = projectList.length
+    ? '프로젝트를 선택해주세요'
+    : '프로젝트 목록을 불러오지 못했습니다. 직접 입력해주세요.';
+  projectSelect.appendChild(defaultOption);
+
+  projectList.forEach(function(project){
+    const option = document.createElement('option');
+    option.value = project.name;
+    option.dataset.code = project.code;
+    option.textContent = project.code ? `${project.name} (${project.code})` : project.name;
+    projectSelect.appendChild(option);
+  });
+}
+
+async function fetchProjectList(){
+  if(projectListLoaded || projectListLoading) return;
+
+  if(!PROJECT_LIST_WEBHOOK_URL || PROJECT_LIST_WEBHOOK_URL.includes('프로젝트목록조회_WEBHOOK_URL')){
+    console.log('프로젝트 목록 웹훅 URL이 설정되지 않았습니다.');
+    populateProjectSelect();
+    return;
+  }
+
+  projectListLoading = true;
+
+  try{
+    const response = await fetch(PROJECT_LIST_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ type: 'projectListRequest' })
+    });
+
+    if(!response.ok){
+      throw new Error('Project list webhook failed: ' + response.status);
+    }
+
+    const data = await response.json();
+    const rawList = Array.isArray(data) ? data : (data.projects || data.results || []);
+
+    projectList = rawList
+      .map(normalizeProjectItem)
+      .filter(Boolean)
+      .sort(function(a, b){
+        return (Number(b.code) || 0) - (Number(a.code) || 0);
+      });
+
+    projectListLoaded = true;
+
+  }catch(error){
+    console.error('프로젝트 목록 조회 실패:', error);
+    projectList = [];
+  }finally{
+    projectListLoading = false;
+    populateProjectSelect();
+    resolveProjectNameFromList();
+  }
+}
+
+function updateProjectNameDisplay(name){
+  const el = document.getElementById('projectNameValue');
+
+  if(!el) return;
+
+  el.innerText = name && String(name).trim() ? String(name).trim() : '-';
+}
+
+function resolveProjectNameFromList(){
+  if(projectName && projectName !== '-') return;
+
+  const codeDigits = String(siteCode || '').replace(/[^0-9]/g, '');
+
+  if(!codeDigits) return;
+
+  const matched = projectList.find(function(project){
+    return String(project.code) === codeDigits;
+  });
+
+  if(matched){
+    projectName = matched.name;
+    updateProjectNameDisplay(matched.name);
+  }
+}
+
+function handleProjectSelectChange(){
+  const projectSelect = document.getElementById('projectSelect');
+  const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
+
+  if(!projectSelect || !siteCodeConfirmInput) return;
+
+  const selectedOption = projectSelect.options[projectSelect.selectedIndex];
+  const code = selectedOption ? selectedOption.dataset.code : '';
+
+  if(code){
+    siteCodeConfirmInput.value = code.replace(/[^0-9]/g, '');
+  }
+
+  if(projectSelect.value){
+    projectName = projectSelect.value;
+    updateProjectNameDisplay(projectSelect.value);
+  }
+}
+
+let vendorRating = 0;
+
+function setVendorRating(value){
+  vendorRating = Number(value) || 0;
+
+  document.querySelectorAll('#vendorStarRow .starBtn').forEach(function(btn){
+    btn.classList.toggle('active', Number(btn.dataset.star) <= vendorRating);
+  });
+}
+
+document.querySelectorAll('#vendorStarRow .starBtn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    setVendorRating(this.dataset.star);
+  });
+});
+
 const params = new URLSearchParams(window.location.search);
 
 function getParam(name, fallback = ''){
@@ -1241,6 +1467,7 @@ let manager = safeDecode(getParam('manager'), '-');
 let vendorName = safeDecode(getParam('vendor'), '-');
 let vendorEmail = safeDecode(getParam('vendorEmail'), '-');
 let amount = safeDecode(getParam('amount'), '-');
+let projectName = safeDecode(getParam('projectName'), '-');
 
 const orderViewer = safeDecode(getParam('order'), '');
 const specViewer = safeDecode(getParam('spec'), '');
@@ -1365,6 +1592,8 @@ function applyApprovalData(){
   document.getElementById('vendorName').innerText = vendorName;
   document.getElementById('vendorEmail').innerText = vendorEmail;
   document.getElementById('amount').innerText = formatAmount(amount);
+
+  updateProjectNameDisplay(projectName !== '-' ? projectName : '');
 
   const firstApproverInfoBox = document.getElementById('firstApproverInfoBox');
   const firstApproverName = document.getElementById('firstApproverName');
@@ -1546,13 +1775,25 @@ async function unlockPage(){
     console.error('checkCurrentApprovalStatus error:', error);
   }
 
+  if(approvalStep === '1' || !projectName || projectName === '-'){
+    fetchProjectList();
+  }
+
   setTimeout(resizeSignatureCanvas, 200);
 }
 
-function checkPassword(){
+async function checkPassword(){
   const input = document.getElementById('passwordInput').value;
 
-  if(input === ACCESS_PASSWORD){
+  let inputHash = '';
+
+  try{
+    inputHash = await sha256Hex(input);
+  }catch(e){
+    console.error('해시 계산 실패:', e);
+  }
+
+  if(inputHash === ACCESS_PASSWORD_HASH){
     sessionStorage.setItem('rvdh_approval_unlocked_' + approvalId + '_' + approvalStep, 'true');
     unlockPage();
   }else{
@@ -1647,6 +1888,16 @@ document.getElementById('approveBtn').addEventListener('click', function(){
       approvalRequiredInfoBlock.style.display = 'block';
       siteCodeConfirmInput.value = siteCode && siteCode !== '-' ? String(siteCode).replace(/[^0-9]/g, '') : '';
 
+      const projectSelect = document.getElementById('projectSelect');
+
+      if(projectSelect){
+        projectSelect.value = '';
+      }
+
+      if(!projectListLoaded && !projectListLoading){
+        fetchProjectList();
+      }
+
       if(processSelect){
         processSelect.value = '';
       }
@@ -1654,6 +1905,8 @@ document.getElementById('approveBtn').addEventListener('click', function(){
       if(detailItemSelect){
         updateDetailItemOptions('');
       }
+
+      setVendorRating(0);
     }else{
       approvalRequiredInfoBlock.style.display = 'none';
       siteCodeConfirmInput.value = '';
@@ -1695,6 +1948,12 @@ if(processSelectEl){
   processSelectEl.addEventListener('change', function(){
     updateDetailItemOptions(this.value);
   });
+}
+
+const projectSelectEl = document.getElementById('projectSelect');
+
+if(projectSelectEl){
+  projectSelectEl.addEventListener('change', handleProjectSelectChange);
 }
 
 document.getElementById('rejectBtn').addEventListener('click', function(){
@@ -1919,6 +2178,14 @@ async function confirmApproval(){
     if(!selectedDetailItem){
       if(approvalRequiredInfoError){
         approvalRequiredInfoError.innerText = '세부항목을 선택해주세요.';
+        approvalRequiredInfoError.style.display = 'block';
+      }
+      return;
+    }
+
+    if(!vendorRating || vendorRating < 1 || vendorRating > 5){
+      if(approvalRequiredInfoError){
+        approvalRequiredInfoError.innerText = '업체 평점을 선택해주세요.';
         approvalRequiredInfoError.style.display = 'block';
       }
       return;
@@ -2200,6 +2467,7 @@ async function sendWebhook(
         siteCodeConfirmed: siteCodeConfirmed || siteCode,
         processName: processName,
         detailItem: detailItem,
+        vendorRating: approvalStep === '1' && status === 'approved_1st' ? vendorRating : '',
         secondApproverName: secondApproverName,
         siteAddress: siteAddress,
         manager: manager,

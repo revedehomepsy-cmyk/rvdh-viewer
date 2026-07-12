@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src https://hook.eu1.make.com; base-uri 'none'; object-src 'none'; form-action 'self'">
   <title>RVDH Receipt Approval</title>
 
   <link rel="icon" type="image/png" href="./favicon.png">
@@ -707,7 +708,13 @@
   </div>
 
   <script>
-    const ACCESS_PASSWORD = '0723';
+    const ACCESS_PASSWORD_HASH = '41177165eddb7d6d754a4f8e6f9758cf06f052c1b2448bd9b5e5e292ce38ea74';
+
+    async function sha256Hex(text){
+      const data = new TextEncoder().encode(text);
+      const digest = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
 
     const RECEIPT_WEBHOOK_URL = 'https://hook.eu1.make.com/s66wtengl28xe1qygo53psswiekmbgev';
     const RECEIPT_STATUS_CHECK_WEBHOOK_URL = 'https://hook.eu1.make.com/50sf7iit995gnnjyob0qs1etu5phdr77';
@@ -1188,10 +1195,18 @@
       setTimeout(resizeSignatureCanvas, 200);
     }
 
-    function checkPassword(){
+    async function checkPassword(){
       const input = document.getElementById('passwordInput').value;
 
-      if(input === ACCESS_PASSWORD){
+      let inputHash = '';
+
+      try{
+        inputHash = await sha256Hex(input);
+      }catch(e){
+        console.error('해시 계산 실패:', e);
+      }
+
+      if(inputHash === ACCESS_PASSWORD_HASH){
         sessionStorage.setItem('rvdh_receipt_unlocked_' + receiptId, 'true');
         unlockPage();
       }else{

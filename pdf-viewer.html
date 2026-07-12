@@ -4,6 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src https://mozilla.github.io; base-uri 'none'; object-src 'none'">
 
 <title>RVDH PDF VIEWER</title>
 
@@ -68,12 +69,46 @@ const params = new URLSearchParams(window.location.search);
 
 const fileUrl = params.get('file');
 
-const viewerUrl =
-"https://mozilla.github.io/pdf.js/web/viewer.html?file="
-+ encodeURIComponent(fileUrl)
-+ "#toolbar=0&navpanes=0&scrollbar=0";
+const ALLOWED_HOST_SUFFIXES = [
+  'amazonaws.com',
+  'notion.so',
+  'notion.site',
+  'notion-static.com',
+  'sharepoint.com',
+  '1drv.ms',
+  'github.io',
+  'make.com'
+];
 
-document.getElementById("pdfFrame").src = viewerUrl;
+function isSafeHttpUrl(rawUrl){
+  try{
+    const parsed = new URL(rawUrl);
+
+    if(parsed.protocol !== 'https:') return false;
+
+    const host = parsed.hostname.toLowerCase();
+
+    return ALLOWED_HOST_SUFFIXES.some(function(suffix){
+      return host === suffix || host.endsWith('.' + suffix);
+    });
+  }catch(e){
+    return false;
+  }
+}
+
+if(fileUrl && isSafeHttpUrl(fileUrl)){
+  const viewerUrl =
+  "https://mozilla.github.io/pdf.js/web/viewer.html?file="
+  + encodeURIComponent(fileUrl)
+  + "#toolbar=0&navpanes=0&scrollbar=0";
+
+  document.getElementById("pdfFrame").src = viewerUrl;
+}else{
+  document.body.innerHTML =
+    '<div style="color:#fff;font-family:sans-serif;padding:40px;text-align:center;line-height:1.6">'
+    + '유효하지 않은 문서 링크입니다.<br>허용되지 않은 주소이거나 링크가 손상되었습니다.'
+    + '</div>';
+}
 
 </script>
 
