@@ -1334,9 +1334,6 @@ async function fetchProjectList(){
   try{
     const response = await fetch(PROJECT_LIST_WEBHOOK_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({ type: 'projectListRequest' })
     });
 
