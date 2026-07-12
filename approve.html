@@ -256,6 +256,30 @@ button:disabled{
   accent-color:white;
 }
 
+.labelRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.refreshBtn{
+  height:auto;
+  padding:7px 12px;
+  border-radius:12px;
+  background:#2F2118;
+  color:white;
+  border:1px solid rgba(255,255,255,.18);
+  font-size:13px;
+  font-weight:500;
+  cursor:pointer;
+}
+
+.refreshBtn:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+
 .starRow{
   display:flex;
   gap:4px;
@@ -848,14 +872,17 @@ button:disabled{
     </div>
 
     <div id="approvalRequiredInfoBlock" style="display:none; margin-top:18px;">
-      <div class="label">프로젝트 선택</div>
+      <div class="labelRow">
+        <div class="label">프로젝트 선택</div>
+        <button type="button" class="refreshBtn" id="refreshProjectBtn">↻ 새로고침</button>
+      </div>
 
       <select id="projectSelect" class="textInput">
         <option value="">프로젝트 목록을 불러오는 중입니다...</option>
       </select>
 
       <div class="noticeText">
-        * 프로젝트를 선택하면 프로젝트명 앞의 숫자(_ 이전)가 현장코드에 자동 입력됩니다. 목록에 없으면 아래에 직접 입력해주세요.
+        * 프로젝트를 선택하면 현장코드가 자동 입력됩니다. 새로 등록한 프로젝트가 목록에 없으면 [↻ 새로고침]을 눌러주세요.
       </div>
 
       <div class="label" style="margin-top:18px;">현장코드 확인</div>
@@ -866,11 +893,12 @@ button:disabled{
         type="text"
         inputmode="numeric"
         pattern="[0-9]*"
-        placeholder="현장코드를 숫자로 입력해주세요."
+        placeholder="프로젝트를 선택하면 자동 입력됩니다."
+        readonly
       >
 
       <div class="noticeText">
-        * 1차 승인 시 현장코드, 공정, 세부항목 입력은 필수입니다.
+        * 1차 승인 시 프로젝트 선택, 공정, 세부항목, 업체 평점은 필수입니다.
       </div>
 
       <div style="margin-top:18px;">
@@ -1903,7 +1931,7 @@ document.getElementById('approveBtn').addEventListener('click', function(){
   if(approvalRequiredInfoBlock && siteCodeConfirmInput){
     if(approvalStep === '1'){
       approvalRequiredInfoBlock.style.display = 'block';
-      siteCodeConfirmInput.value = siteCode && siteCode !== '-' ? String(siteCode).replace(/[^0-9]/g, '') : '';
+      siteCodeConfirmInput.value = '';
 
       const projectSelect = document.getElementById('projectSelect');
 
@@ -1971,6 +1999,40 @@ const projectSelectEl = document.getElementById('projectSelect');
 
 if(projectSelectEl){
   projectSelectEl.addEventListener('change', handleProjectSelectChange);
+}
+
+const refreshProjectBtn = document.getElementById('refreshProjectBtn');
+
+if(refreshProjectBtn){
+  refreshProjectBtn.addEventListener('click', async function(){
+    const projectSelect = document.getElementById('projectSelect');
+    const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
+
+    refreshProjectBtn.disabled = true;
+    const prevLabel = refreshProjectBtn.textContent;
+    refreshProjectBtn.textContent = '불러오는 중...';
+
+    if(projectSelect){
+      projectSelect.value = '';
+      projectSelect.innerHTML = '<option value="">프로젝트 목록을 불러오는 중입니다...</option>';
+    }
+
+    if(siteCodeConfirmInput){
+      siteCodeConfirmInput.value = '';
+    }
+
+    projectListLoaded = false;
+    projectListLoading = false;
+
+    try{
+      await fetchProjectList();
+    }catch(error){
+      console.error('프로젝트 목록 새로고침 실패:', error);
+    }finally{
+      refreshProjectBtn.textContent = prevLabel;
+      refreshProjectBtn.disabled = false;
+    }
+  });
 }
 
 document.getElementById('rejectBtn').addEventListener('click', function(){
@@ -2156,6 +2218,9 @@ async function confirmApproval(){
     const processSelect = document.getElementById('processSelect');
     const detailItemSelect = document.getElementById('detailItemSelect');
 
+    const projectSelect = document.getElementById('projectSelect');
+    const selectedProject = projectSelect ? projectSelect.value.trim() : '';
+
     if(siteCodeConfirmInput){
       confirmedSiteCode = siteCodeConfirmInput.value.trim();
     }
@@ -2166,6 +2231,14 @@ async function confirmApproval(){
 
     if(detailItemSelect){
       selectedDetailItem = detailItemSelect.value.trim();
+    }
+
+    if(!selectedProject){
+      if(approvalRequiredInfoError){
+        approvalRequiredInfoError.innerText = '프로젝트를 선택해주세요.';
+        approvalRequiredInfoError.style.display = 'block';
+      }
+      return;
     }
 
     if(!confirmedSiteCode){
