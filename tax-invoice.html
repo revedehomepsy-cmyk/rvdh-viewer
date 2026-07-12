@@ -626,6 +626,9 @@
     const LIST_WEBHOOK_URL   = 'https://hook.eu1.make.com/73zjq3dminwvb4yk9y8ltj9j43lt293r';
     const SUBMIT_WEBHOOK_URL = 'https://hook.eu1.make.com/8uvmh9oifw1j2epn06nqbhoc51d6pcht';
 
+    // 목록/제출 웹훅 인증용 공유 키 (Make 시나리오 앞단 필터에서 대조)
+    const WEBHOOK_ACCESS_KEY = 'rvdh_99ddf784a9b87bedb074ea4d5a1894ee';
+
     /* ---------- 공통 유틸 ---------- */
     function formatAmount(value){
       if(value === null || value === undefined || value === '' || value === '-') return '-';
@@ -729,7 +732,7 @@
         const response = await fetch(LIST_WEBHOOK_URL, {
           method:'POST',
           headers:{ 'Content-Type':'application/json' },
-          body:JSON.stringify({ type:'taxInvoiceList' })
+          body:JSON.stringify({ type:'taxInvoiceList', key: WEBHOOK_ACCESS_KEY })
         });
 
         // 원문 텍스트를 먼저 받아서 디버깅 + 깨진 JSON 복구
@@ -1008,6 +1011,7 @@
 
       const formData = new FormData();
       formData.append('type', 'taxInvoiceSubmit');
+      formData.append('key', WEBHOOK_ACCESS_KEY);
       formData.append('id', selectedItem.id);
       formData.append('notionId', selectedItem.notionId || '');
       formData.append('vendor', selectedItem.vendor);
