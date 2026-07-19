@@ -2335,6 +2335,10 @@ async function confirmApproval(){
 
     siteCode = confirmedSiteCode;
     document.getElementById('siteCode').innerText = confirmedSiteCode;
+
+    if(selectedProject){
+      projectName = selectedProject;
+    }
   }
 
   if(approvalStep === '2'){
@@ -2607,6 +2611,7 @@ async function sendWebhook(
         status: status,
         siteCode: siteCode,
         siteCodeConfirmed: siteCodeConfirmed || siteCode,
+        projectName: projectName && projectName !== '-' ? projectName : '',
         processName: processName,
         detailItem: detailItem,
         vendorRating: approvalStep === '1' && status === 'approved_1st' ? vendorRating : '',
