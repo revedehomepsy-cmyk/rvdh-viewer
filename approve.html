@@ -368,6 +368,22 @@ button:disabled{
   box-shadow:0 30px 80px rgba(0,0,0,.35);
   max-height:90vh;
   overflow:auto;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+
+.popupBox::-webkit-scrollbar{
+  display:none;
+}
+
+html, body{
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+
+body::-webkit-scrollbar,
+html::-webkit-scrollbar{
+  display:none;
 }
 
 .popupTitle{
@@ -904,7 +920,7 @@ button:disabled{
       </div>
 
       <div style="margin-top:18px;">
-        <div class="label">공정 선택</div>
+        <div class="label" id="processSelectLabel">공정 선택</div>
 
         <select id="processSelect" class="textInput">
           <option value="">공정을 선택해주세요</option>
@@ -934,7 +950,7 @@ button:disabled{
       </div>
 
       <div style="margin-top:18px;">
-        <div class="label">세부항목 선택</div>
+        <div class="label" id="detailItemSelectLabel">세부항목 선택</div>
 
         <select id="detailItemSelect" class="textInput">
           <option value="">먼저 공정을 선택해주세요</option>
@@ -1563,13 +1579,19 @@ function applyStepUI(){
   const commentTextarea = document.getElementById('comment');
   const reassignBtn = document.getElementById('reassignBtn');
 
+  const processSelectLabel = document.getElementById('processSelectLabel');
+  const detailItemSelectLabel = document.getElementById('detailItemSelectLabel');
+
   if(approvalStep === '2'){
     subText.innerText = 'Accounting Approval';
     badge.innerText = '2차 승인';
     stepText.innerText = '2차 승인 / ' + getApproverRoleLabel();
 
+    if(processSelectLabel) processSelectLabel.innerText = '공정 확인';
+    if(detailItemSelectLabel) detailItemSelectLabel.innerText = '세부항목 확인';
+
     approveBtn.innerText = '2차 승인하기';
-    approvePopupTitle.innerText = '2차 승인하시겠습니까?';
+    approvePopupTitle.innerText = '2차 승인 확인';
     approvePopupDesc.innerHTML = '2차 승인 완료 후에는 회계 확인이 완료된 건으로 기록됩니다.<br><br>청구 내용과 첨부자료를 다시 한번 확인한 뒤, 아래 서명란에 서명해주세요.';
     confirmApproveBtn.innerText = '2차 승인 확정';
     commentLabel.innerText = '2차 승인 메모';
