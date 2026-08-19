@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; base-uri 'none'; object-src 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src https:; base-uri 'none'; object-src 'none'; form-action 'self'">
 <title>RVDH Viewer</title>
 
 <style>
@@ -277,6 +277,56 @@ function appendWatermarkLayer(parent){
   parent.appendChild(layer);
 }
 
+let heicLibPromise = null;
+
+function loadHeicLib(){
+  if(window.heic2any) return Promise.resolve();
+
+  if(heicLibPromise) return heicLibPromise;
+
+  heicLibPromise = new Promise(function(resolve, reject){
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+
+  return heicLibPromise;
+}
+
+function looksLikeHeic(url){
+  const withoutQuery = String(url || '').split('?')[0].toLowerCase();
+  return /\.(heic|heif)$/.test(withoutQuery);
+}
+
+async function tryConvertHeic(url, img){
+  try{
+    const response = await fetch(url);
+
+    if(!response.ok) throw new Error('fetch failed: ' + response.status);
+
+    const blob = await response.blob();
+
+    await loadHeicLib();
+
+    const converted = await window.heic2any({
+      blob: blob,
+      toType: 'image/jpeg',
+      quality: 0.85
+    });
+
+    const resultBlob = Array.isArray(converted) ? converted[0] : converted;
+
+    img.src = URL.createObjectURL(resultBlob);
+
+    return true;
+  }catch(error){
+    console.warn('HEIC 변환 실패:', error);
+    return false;
+  }
+}
+
 function createImageBlock(url, index){
   const cleanUrl = sanitizeUrl(url);
 
@@ -291,12 +341,11 @@ function createImageBlock(url, index){
   inner.className = 'imageInner';
 
   const img = document.createElement('img');
-  img.src = cleanUrl;
   img.alt = `${index + 1} 페이지`;
 
   img.addEventListener('dragstart', e => e.preventDefault());
 
-  img.onerror = function(){
+  function showFileFallback(){
     wrap.innerHTML = '';
 
     const title = document.createElement('div');
@@ -318,7 +367,35 @@ function createImageBlock(url, index){
     wrap.appendChild(title);
     wrap.appendChild(button);
     wrap.appendChild(notice);
-  };
+  }
+
+  let heicAttempted = false;
+
+  function attemptHeicOrFallback(){
+    if(heicAttempted){
+      showFileFallback();
+      return;
+    }
+
+    heicAttempted = true;
+
+    tryConvertHeic(cleanUrl, img).then(function(success){
+      if(!success) showFileFallback();
+    });
+  }
+
+  img.onerror = attemptHeicOrFallback;
+
+  // 확장자가 명확히 HEIC면 img 로드 시도 없이 바로 변환 시작
+  if(looksLikeHeic(cleanUrl)){
+    heicAttempted = true;
+
+    tryConvertHeic(cleanUrl, img).then(function(success){
+      if(!success) showFileFallback();
+    });
+  }else{
+    img.src = cleanUrl;
+  }
 
   inner.appendChild(img);
   appendWatermarkLayer(inner);
