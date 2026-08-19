@@ -872,33 +872,35 @@ button:disabled{
     </div>
 
     <div id="approvalRequiredInfoBlock" style="display:none; margin-top:18px;">
-      <div class="labelRow">
-        <div class="label">프로젝트 선택</div>
-        <button type="button" class="refreshBtn" id="refreshProjectBtn">↻ 새로고침</button>
-      </div>
+      <div id="projectSection">
+        <div class="labelRow">
+          <div class="label">프로젝트 선택</div>
+          <button type="button" class="refreshBtn" id="refreshProjectBtn">↻ 새로고침</button>
+        </div>
 
-      <select id="projectSelect" class="textInput">
-        <option value="">프로젝트 목록을 불러오는 중입니다...</option>
-      </select>
+        <select id="projectSelect" class="textInput">
+          <option value="">프로젝트 목록을 불러오는 중입니다...</option>
+        </select>
 
-      <div class="noticeText">
-        * 프로젝트를 선택하면 현장코드가 자동 입력됩니다. 새로 등록한 프로젝트가 목록에 없으면 [↻ 새로고침]을 눌러주세요.
-      </div>
+        <div class="noticeText">
+          * 프로젝트를 선택하면 현장코드가 자동 입력됩니다. 새로 등록한 프로젝트가 목록에 없으면 [↻ 새로고침]을 눌러주세요.
+        </div>
 
-      <div class="label" style="margin-top:18px;">현장코드 확인</div>
+        <div class="label" style="margin-top:18px;">현장코드 확인</div>
 
-      <input
-        id="siteCodeConfirmInput"
-        class="textInput"
-        type="text"
-        inputmode="numeric"
-        pattern="[0-9]*"
-        placeholder="프로젝트를 선택하면 자동 입력됩니다."
-        readonly
-      >
+        <input
+          id="siteCodeConfirmInput"
+          class="textInput"
+          type="text"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          placeholder="프로젝트를 선택하면 자동 입력됩니다."
+          readonly
+        >
 
-      <div class="noticeText">
-        * 1차 승인 시 프로젝트 선택, 공정, 세부항목, 업체 평점, 승인 메모(진행된 작업 내용)는 필수입니다.
+        <div class="noticeText">
+          * 1차 승인 시 프로젝트 선택, 공정, 세부항목, 업체 평점, 승인 메모(진행된 작업 내용)는 필수입니다.
+        </div>
       </div>
 
       <div style="margin-top:18px;">
@@ -937,9 +939,13 @@ button:disabled{
         <select id="detailItemSelect" class="textInput">
           <option value="">먼저 공정을 선택해주세요</option>
         </select>
+
+        <div class="noticeText" id="processStep2Notice" style="display:none;">
+          * 1차 승인 시 선택된 공정·세부항목입니다. 잘못 지정된 경우 변경할 수 있습니다.
+        </div>
       </div>
 
-      <div style="margin-top:18px;">
+      <div style="margin-top:18px;" id="ratingSection">
         <div class="label">업체 평점</div>
 
         <div class="starRow" id="vendorStarRow">
@@ -1522,6 +1528,9 @@ let vendorEmail = safeDecode(getParam('vendorEmail'), '-');
 let amount = safeDecode(getParam('amount'), '-');
 let projectName = safeDecode(getParam('projectName'), '-');
 
+const initialProcessName = safeDecode(getParam('processName') || getParam('process'), '').replace(/^-$/, '');
+const initialDetailItem = safeDecode(getParam('detailItem') || getParam('subProcess'), '').replace(/^-$/, '');
+
 const orderViewer = safeDecode(getParam('order'), '');
 const specViewer = safeDecode(getParam('spec'), '');
 const expires = safeDecode(getParam('expires'), '');
@@ -1618,6 +1627,47 @@ function addWatermarkToViewerUrl(url){
   return cleanUrl + separator + 'watermark=' + encodeURIComponent(watermarkName);
 }
   
+function resolveDirectPdfUrl(url){
+  const clean = String(url || '').trim();
+
+  if(!clean) return '';
+
+  try{
+    const parsed = new URL(clean);
+
+    // 뷰어 URL이 아니라 URL 자체가 PDF면 그대로 사용
+    if(/\.pdf($|\?)/i.test(parsed.pathname)) return clean;
+
+    // 뷰어 URL의 items 파라미터가 단일 PDF 하나면 그 PDF 주소를 추출
+    const itemsRaw = parsed.searchParams.get('items');
+
+    if(itemsRaw){
+      const decoded = safeDecode(itemsRaw, '');
+      const parts = decoded.split('|').map(function(s){ return s.trim(); }).filter(Boolean);
+
+      if(parts.length === 1){
+        let item = parts[0];
+        const sep = item.indexOf('::');
+        let type = '';
+        let inner = item;
+
+        if(sep > -1){
+          type = item.slice(0, sep).trim().toLowerCase();
+          inner = item.slice(sep + 2).trim();
+        }
+
+        inner = safeDecode(inner, '');
+
+        if(type === 'pdf' || /\.pdf($|\?)/i.test(inner)){
+          return inner;
+        }
+      }
+    }
+  }catch(e){}
+
+  return '';
+}
+
 function setViewerButton(button, url, emptyText){
   const cleanUrl = String(url || '').trim();
 
@@ -1627,9 +1677,13 @@ function setViewerButton(button, url, emptyText){
     cleanUrl !== '[object Object]' &&
     !cleanUrl.includes('[object Object]')
   ){
-    const finalUrl = button.id === 'specButton'
-      ? addWatermarkToViewerUrl(cleanUrl)
-      : cleanUrl;
+    const directPdf = resolveDirectPdfUrl(cleanUrl);
+
+    const finalUrl = directPdf
+      ? directPdf
+      : (button.id === 'specButton'
+          ? addWatermarkToViewerUrl(cleanUrl)
+          : cleanUrl);
 
     if(finalUrl){
       button.href = finalUrl;
@@ -1966,9 +2020,18 @@ document.getElementById('approveBtn').addEventListener('click', function(){
     commentError.style.display = 'none';
   }
 
+  const projectSection = document.getElementById('projectSection');
+  const ratingSection = document.getElementById('ratingSection');
+  const processStep2Notice = document.getElementById('processStep2Notice');
+
   if(approvalRequiredInfoBlock && siteCodeConfirmInput){
     if(approvalStep === '1'){
       approvalRequiredInfoBlock.style.display = 'block';
+
+      if(projectSection) projectSection.style.display = 'block';
+      if(ratingSection) ratingSection.style.display = 'block';
+      if(processStep2Notice) processStep2Notice.style.display = 'none';
+
       siteCodeConfirmInput.value = '';
 
       const projectSelect = document.getElementById('projectSelect');
@@ -1991,15 +2054,21 @@ document.getElementById('approveBtn').addEventListener('click', function(){
 
       setVendorRating(0);
     }else{
-      approvalRequiredInfoBlock.style.display = 'none';
+      approvalRequiredInfoBlock.style.display = 'block';
+
+      if(projectSection) projectSection.style.display = 'none';
+      if(ratingSection) ratingSection.style.display = 'none';
+      if(processStep2Notice) processStep2Notice.style.display = 'block';
+
       siteCodeConfirmInput.value = '';
 
       if(processSelect){
-        processSelect.value = '';
+        processSelect.value = initialProcessName || '';
       }
 
       if(detailItemSelect){
-        updateDetailItemOptions('');
+        updateDetailItemOptions(processSelect ? processSelect.value : '');
+        detailItemSelect.value = initialDetailItem || '';
       }
     }
   }
@@ -2344,6 +2413,37 @@ async function confirmApproval(){
   if(approvalStep === '2'){
     const secondApproverNameInput = document.getElementById('secondApproverNameInput');
     const secondApproverNameError = document.getElementById('secondApproverNameError');
+    const processSelect2 = document.getElementById('processSelect');
+    const detailItemSelect2 = document.getElementById('detailItemSelect');
+    const approvalRequiredInfoError2 = document.getElementById('approvalRequiredInfoError');
+
+    if(processSelect2){
+      selectedProcessName = processSelect2.value.trim();
+    }
+
+    if(detailItemSelect2){
+      selectedDetailItem = detailItemSelect2.value.trim();
+    }
+
+    if(!selectedProcessName){
+      if(approvalRequiredInfoError2){
+        approvalRequiredInfoError2.innerText = '공정을 확인 후 선택해주세요.';
+        approvalRequiredInfoError2.style.display = 'block';
+      }
+      return;
+    }
+
+    if(!selectedDetailItem){
+      if(approvalRequiredInfoError2){
+        approvalRequiredInfoError2.innerText = '세부항목을 확인 후 선택해주세요.';
+        approvalRequiredInfoError2.style.display = 'block';
+      }
+      return;
+    }
+
+    if(approvalRequiredInfoError2){
+      approvalRequiredInfoError2.style.display = 'none';
+    }
 
     if(secondApproverNameInput){
       secondApproverName = secondApproverNameInput.value.trim();
