@@ -280,6 +280,52 @@ button:disabled{
   cursor:not-allowed;
 }
 
+.comboBox{
+  position:relative;
+}
+
+.comboList{
+  position:absolute;
+  top:100%;
+  left:0;
+  right:0;
+  margin-top:6px;
+  max-height:240px;
+  overflow-y:auto;
+  background:#2F2118;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:16px;
+  box-shadow:0 20px 50px rgba(0,0,0,.35);
+  z-index:30;
+  display:none;
+}
+
+.comboList.open{
+  display:block;
+}
+
+.comboItem{
+  padding:13px 16px;
+  font-size:15px;
+  cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+
+.comboItem:last-child{
+  border-bottom:none;
+}
+
+.comboItem:hover,
+.comboItem.active{
+  background:rgba(255,255,255,.1);
+}
+
+.comboEmpty{
+  padding:13px 16px;
+  font-size:14px;
+  color:rgba(255,255,255,.45);
+}
+
 .starRow{
   display:flex;
   gap:4px;
@@ -894,12 +940,22 @@ html::-webkit-scrollbar{
           <button type="button" class="refreshBtn" id="refreshProjectBtn">↻ 새로고침</button>
         </div>
 
-        <select id="projectSelect" class="textInput">
-          <option value="">프로젝트 목록을 불러오는 중입니다...</option>
-        </select>
+        <div class="comboBox" id="projectComboBox">
+          <input
+            id="projectSearchInput"
+            class="textInput"
+            type="text"
+            placeholder="프로젝트 목록을 불러오는 중입니다..."
+            autocomplete="off"
+          >
+
+          <input type="hidden" id="projectSelect" value="">
+
+          <div class="comboList" id="projectComboList"></div>
+        </div>
 
         <div class="noticeText">
-          * 프로젝트를 선택하면 현장코드가 자동 입력됩니다. 새로 등록한 프로젝트가 목록에 없으면 [↻ 새로고침]을 눌러주세요.
+          * 프로젝트명 또는 현장코드로 검색한 뒤 목록에서 선택하면 현장코드가 자동 입력됩니다. 새로 등록한 프로젝트가 목록에 없으면 [↻ 새로고침]을 눌러주세요.
         </div>
 
         <div class="label" style="margin-top:18px;">현장코드 확인</div>
@@ -1355,27 +1411,144 @@ function normalizeProjectItem(item){
   return { name: String(name).trim(), code: code, address: String(address).trim() };
 }
 
-function populateProjectSelect(){
-  const projectSelect = document.getElementById('projectSelect');
+let selectedProjectCode = '';
 
-  if(!projectSelect) return;
+function getProjectSearchInput(){
+  return document.getElementById('projectSearchInput');
+}
 
-  projectSelect.innerHTML = '';
+function getProjectComboList(){
+  return document.getElementById('projectComboList');
+}
 
-  const defaultOption = document.createElement('option');
-  defaultOption.value = '';
-  defaultOption.textContent = projectList.length
-    ? '프로젝트를 선택해주세요'
-    : '프로젝트 목록을 불러오지 못했습니다. 직접 입력해주세요.';
-  projectSelect.appendChild(defaultOption);
+function filterProjectList(keyword){
+  const kw = String(keyword || '').trim().toLowerCase();
 
-  projectList.forEach(function(project){
-    const option = document.createElement('option');
-    option.value = project.name;
-    option.dataset.code = project.code;
-    option.textContent = project.code ? `${project.name} (${project.code})` : project.name;
-    projectSelect.appendChild(option);
+  if(!kw) return projectList;
+
+  return projectList.filter(function(project){
+    const name = String(project.name || '').toLowerCase();
+    const code = String(project.code || '').toLowerCase();
+
+    return name.includes(kw) || code.includes(kw);
   });
+}
+
+function renderProjectComboList(keyword){
+  const comboList = getProjectComboList();
+
+  if(!comboList) return;
+
+  comboList.innerHTML = '';
+
+  if(!projectList.length){
+    const empty = document.createElement('div');
+    empty.className = 'comboEmpty';
+    empty.textContent = projectListLoading
+      ? '프로젝트 목록을 불러오는 중입니다...'
+      : '프로젝트 목록을 불러오지 못했습니다. [↻ 새로고침]을 눌러주세요.';
+    comboList.appendChild(empty);
+    return;
+  }
+
+  const filtered = filterProjectList(keyword);
+
+  if(!filtered.length){
+    const empty = document.createElement('div');
+    empty.className = 'comboEmpty';
+    empty.textContent = '일치하는 프로젝트가 없습니다.';
+    comboList.appendChild(empty);
+    return;
+  }
+
+  filtered.forEach(function(project){
+    const item = document.createElement('div');
+    item.className = 'comboItem';
+    item.textContent = project.code ? `${project.name} (${project.code})` : project.name;
+
+    item.addEventListener('mousedown', function(e){
+      e.preventDefault();
+      selectProject(project);
+    });
+
+    comboList.appendChild(item);
+  });
+}
+
+function openProjectComboList(){
+  const comboList = getProjectComboList();
+  const searchInput = getProjectSearchInput();
+
+  if(!comboList) return;
+
+  renderProjectComboList(searchInput ? searchInput.value : '');
+  comboList.classList.add('open');
+}
+
+function closeProjectComboList(){
+  const comboList = getProjectComboList();
+
+  if(!comboList) return;
+
+  comboList.classList.remove('open');
+}
+
+function selectProject(project){
+  const searchInput = getProjectSearchInput();
+  const hiddenInput = document.getElementById('projectSelect');
+  const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
+
+  if(searchInput){
+    searchInput.value = project.code ? `${project.name} (${project.code})` : project.name;
+  }
+
+  if(hiddenInput){
+    hiddenInput.value = project.name;
+  }
+
+  selectedProjectCode = project.code || '';
+
+  if(siteCodeConfirmInput){
+    siteCodeConfirmInput.value = selectedProjectCode.replace(/[^0-9]/g, '');
+  }
+
+  projectName = project.name;
+  updateProjectNameDisplay(project.name);
+
+  closeProjectComboList();
+}
+
+function clearProjectSelection(){
+  const searchInput = getProjectSearchInput();
+  const hiddenInput = document.getElementById('projectSelect');
+  const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
+
+  if(searchInput) searchInput.value = '';
+  if(hiddenInput) hiddenInput.value = '';
+
+  selectedProjectCode = '';
+
+  if(siteCodeConfirmInput) siteCodeConfirmInput.value = '';
+
+  closeProjectComboList();
+}
+
+function populateProjectSelect(){
+  // 검색형 콤보박스는 입력 시 목록을 동적으로 그리므로,
+  // 여기서는 검색창 placeholder와 (열려 있다면) 현재 목록만 갱신합니다.
+  const searchInput = getProjectSearchInput();
+
+  if(searchInput){
+    searchInput.placeholder = projectList.length
+      ? '프로젝트명 또는 현장코드로 검색해주세요.'
+      : '프로젝트 목록을 불러오지 못했습니다. [↻ 새로고침]을 눌러주세요.';
+  }
+
+  const comboList = getProjectComboList();
+
+  if(comboList && comboList.classList.contains('open')){
+    renderProjectComboList(searchInput ? searchInput.value : '');
+  }
 }
 
 function parseProjectResponse(text){
@@ -1463,25 +1636,6 @@ function resolveProjectNameFromList(){
   if(matched){
     projectName = matched.name;
     updateProjectNameDisplay(matched.name);
-  }
-}
-
-function handleProjectSelectChange(){
-  const projectSelect = document.getElementById('projectSelect');
-  const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
-
-  if(!projectSelect || !siteCodeConfirmInput) return;
-
-  const selectedOption = projectSelect.options[projectSelect.selectedIndex];
-  const code = selectedOption ? selectedOption.dataset.code : '';
-
-  if(code){
-    siteCodeConfirmInput.value = code.replace(/[^0-9]/g, '');
-  }
-
-  if(projectSelect.value){
-    projectName = projectSelect.value;
-    updateProjectNameDisplay(projectSelect.value);
   }
 }
 
@@ -2054,13 +2208,7 @@ document.getElementById('approveBtn').addEventListener('click', function(){
       if(ratingSection) ratingSection.style.display = 'block';
       if(processStep2Notice) processStep2Notice.style.display = 'none';
 
-      siteCodeConfirmInput.value = '';
-
-      const projectSelect = document.getElementById('projectSelect');
-
-      if(projectSelect){
-        projectSelect.value = '';
-      }
+      clearProjectSelection();
 
       if(!projectListLoaded && !projectListLoading){
         fetchProjectList();
@@ -2124,30 +2272,81 @@ if(processSelectEl){
   });
 }
 
-const projectSelectEl = document.getElementById('projectSelect');
+const projectSearchInputEl = document.getElementById('projectSearchInput');
+const projectComboBoxEl = document.getElementById('projectComboBox');
 
-if(projectSelectEl){
-  projectSelectEl.addEventListener('change', handleProjectSelectChange);
+if(projectSearchInputEl){
+  projectSearchInputEl.addEventListener('input', function(){
+    // 검색어를 직접 수정하면 기존에 확정했던 선택은 무효화합니다.
+    const hiddenInput = document.getElementById('projectSelect');
+    const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
+
+    if(hiddenInput) hiddenInput.value = '';
+    if(siteCodeConfirmInput) siteCodeConfirmInput.value = '';
+
+    selectedProjectCode = '';
+
+    openProjectComboList();
+  });
+
+  projectSearchInputEl.addEventListener('focus', function(){
+    openProjectComboList();
+  });
+
+  projectSearchInputEl.addEventListener('keydown', function(e){
+    const comboList = getProjectComboList();
+
+    if(!comboList || !comboList.classList.contains('open')) return;
+
+    const items = Array.from(comboList.querySelectorAll('.comboItem'));
+
+    if(!items.length) return;
+
+    let activeIndex = items.findIndex(function(item){ return item.classList.contains('active'); });
+
+    if(e.key === 'ArrowDown'){
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % items.length;
+      items.forEach(function(item){ item.classList.remove('active'); });
+      items[activeIndex].classList.add('active');
+      items[activeIndex].scrollIntoView({ block: 'nearest' });
+    }else if(e.key === 'ArrowUp'){
+      e.preventDefault();
+      activeIndex = activeIndex <= 0 ? items.length - 1 : activeIndex - 1;
+      items.forEach(function(item){ item.classList.remove('active'); });
+      items[activeIndex].classList.add('active');
+      items[activeIndex].scrollIntoView({ block: 'nearest' });
+    }else if(e.key === 'Enter'){
+      if(activeIndex > -1){
+        e.preventDefault();
+        items[activeIndex].dispatchEvent(new Event('mousedown', { cancelable: true }));
+      }
+    }else if(e.key === 'Escape'){
+      closeProjectComboList();
+    }
+  });
 }
+
+document.addEventListener('click', function(e){
+  if(projectComboBoxEl && !projectComboBoxEl.contains(e.target)){
+    closeProjectComboList();
+  }
+});
 
 const refreshProjectBtn = document.getElementById('refreshProjectBtn');
 
 if(refreshProjectBtn){
   refreshProjectBtn.addEventListener('click', async function(){
-    const projectSelect = document.getElementById('projectSelect');
-    const siteCodeConfirmInput = document.getElementById('siteCodeConfirmInput');
-
     refreshProjectBtn.disabled = true;
     const prevLabel = refreshProjectBtn.textContent;
     refreshProjectBtn.textContent = '불러오는 중...';
 
-    if(projectSelect){
-      projectSelect.value = '';
-      projectSelect.innerHTML = '<option value="">프로젝트 목록을 불러오는 중입니다...</option>';
-    }
+    clearProjectSelection();
 
-    if(siteCodeConfirmInput){
-      siteCodeConfirmInput.value = '';
+    const searchInput = getProjectSearchInput();
+
+    if(searchInput){
+      searchInput.placeholder = '프로젝트 목록을 불러오는 중입니다...';
     }
 
     projectListLoaded = false;
